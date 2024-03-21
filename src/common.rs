@@ -36,6 +36,7 @@ pub use eframe::{
 	Pos2,
 	Rect,
 	Response,
+	RichText,
 	self,
 	ScrollArea,
 	scroll_area::ScrollBarVisibility,

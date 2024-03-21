@@ -210,7 +210,7 @@ impl eframe::App for Leved {
 
 							ScrollArea::both()
 								.scroll_bar_visibility(ScrollBarVisibility::AlwaysVisible)
-								.max_width(800.0)
+								// .max_width(800.0)
 								.max_height(600.0)
 								.show(ui,|ui| {
 									ui.add(&mut self.tv);
@@ -310,12 +310,21 @@ impl eframe::App for Leved {
 												  });
 										  });
 										  ui.separator();
-										  for (iroom,room_ptr) in self.world.rooms.iter() {
+										  let active_id = self.tv.room().map(|p| p.yank().id);
+										  for (&iroom,room_ptr) in self.world.rooms.iter() {
 											  let room = room_ptr.yank();
 											  ui.horizontal(|ui| {
 												  ui.monospace(format!("{:8}",iroom));
 												  ui.separator();
-												  if ui.button(&room.name).clicked() {
+												  let active = Some(iroom) == active_id;
+												  let rt = RichText::new(&room.name);
+												  let rt =
+													  if active {
+														  rt.strong()
+													  } else {
+														  rt
+													  };
+												  if ui.button(rt).clicked() {
 													  self.tv.set_room(Some(Ptr::clone(&room_ptr)));
 												  }
 											  });
