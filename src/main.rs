@@ -67,6 +67,7 @@ struct Leved {
     tv:TileViewer,
 	message:String,
 	door_props_open:bool,
+	path:Option<PathBuf>,
 	door_editor:Option<DoorEditor>
 }
 
@@ -80,6 +81,7 @@ impl Leved {
 			world:World::new(),
 			tv,
 			message:String::new(),
+			path:None,
 			door_props_open:false,
 			door_editor:None
 		}
@@ -88,6 +90,19 @@ impl Leved {
 	fn message(&mut self,msg:&str) {
 		self.message.clear();
 		self.message.push_str(msg);
+	}
+
+
+	fn path_so(&self)->Option<String> {
+		self.path
+			.as_ref()
+			.map(|pb|
+				 pb
+				 .clone()
+				 .into_os_string()
+				 .into_string()
+				 .ok())
+			.flatten()
 	}
 }
 
@@ -271,32 +286,57 @@ impl eframe::App for Leved {
 							ui.separator();
 							ui.horizontal(|ui| {
 								if ui.button("SAVE").clicked() {
-									let patho =
+									let rfd =
 										rfd::FileDialog::new()
-										.set_title("Save world")
-										.save_file()
-										.map(|pb| pb
-											 .into_os_string()
-											 .into_string()
-											 .unwrap_or_else(|_| "WTF".to_string()));
+										.set_title("Save world");
+
+									let rfd =
+										if let Some(path) = self.path .as_ref() .map(|pb| pb.parent()) .flatten() {
+											rfd.set_directory(path)
+										} else {
+											rfd
+										};
+
+									let rfd =
+										if let Some(path_s) = self.path_so() {
+											rfd.set_file_name(path_s)
+										} else {
+											rfd
+										};
+
+									let patho = rfd.save_file();
+
 									if let Some(path) = patho {
 										match self.world.save(&path) {
 											Err(e) => self.message(&format!("Error: {}",e)),
-											Ok(()) => self.message(&format!("Saved under {:?}",path))
+											Ok(()) => {
+												self.message(&format!("Saved under {:?}",path));
+												self.path = Some(path);
+											}
+
 										}
 									}
 								}
 								if ui.button("LOAD").clicked() {
-									let patho = rfd::FileDialog::new().pick_file()
-										.map(|pb| pb
-											 .into_os_string()
-											 .into_string()
-											 .unwrap_or_else(|_| "WTF".to_string()));
+									let rfd = rfd::FileDialog::new()
+										.set_title("Load world");
+
+									let rfd =
+										if let Some(path_s) = self.path_so() {
+											rfd.set_file_name(path_s)
+										} else {
+											rfd
+										};
+
+									let patho = rfd.pick_file();
+
 									if let Some(path) = patho {
 										self.world.clear();
 										match self.world.load(&path) {
 											Err(e) => self.message(&format!("Error: {}",e)),
 											Ok(()) => {
+												self.message(&format!("Loaded from {:?}",path));
+												self.path = Some(path);
 												if let Some(room) = self.world.rooms.get(&self.world.start_room) {
 													self.tv.set_room(Some(Ptr::clone(room)));
 												}
