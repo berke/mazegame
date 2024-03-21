@@ -271,6 +271,20 @@ impl eframe::App for Leved {
 							ui.separator();
 							ui.horizontal(|ui| {
 								if ui.button("SAVE").clicked() {
+									let patho =
+										rfd::FileDialog::new()
+										.set_title("Save world")
+										.save_file()
+										.map(|pb| pb
+											 .into_os_string()
+											 .into_string()
+											 .unwrap_or_else(|_| "WTF".to_string()));
+									if let Some(path) = patho {
+										match self.world.save(&path) {
+											Err(e) => self.message(&format!("Error: {}",e)),
+											Ok(()) => self.message(&format!("Saved under {:?}",path))
+										}
+									}
 								}
 								if ui.button("LOAD").clicked() {
 									let patho = rfd::FileDialog::new().pick_file()
@@ -280,8 +294,8 @@ impl eframe::App for Leved {
 											 .unwrap_or_else(|_| "WTF".to_string()));
 									if let Some(path) = patho {
 										self.world.clear();
-										match self.world.load(path) {
-											Err(e) => eprintln!("Error: {}",e),
+										match self.world.load(&path) {
+											Err(e) => self.message(&format!("Error: {}",e)),
 											Ok(()) => {
 												if let Some(room) = self.world.rooms.get(&self.world.start_room) {
 													self.tv.set_room(Some(Ptr::clone(room)));

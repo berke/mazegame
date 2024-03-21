@@ -1,7 +1,12 @@
+use serde::{
+    Deserialize,
+    Serialize
+};
+
 const A:u32=1664525;
 const B:u32=1013904223;
 
-#[derive(Debug)]
+#[derive(Debug,Serialize,Deserialize)]
 pub struct MiniRNG {
     q:u32
 }

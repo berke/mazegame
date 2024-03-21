@@ -1,9 +1,14 @@
+use serde::{
+    Deserialize,
+    Serialize
+};
+
 use std::ops::{
     Index,
     IndexMut
 };
 
-#[derive(Debug)]
+#[derive(Debug,Serialize,Deserialize)]
 pub struct A2<T> {
     d0:isize,
     d1:isize,

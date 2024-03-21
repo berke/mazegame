@@ -3,7 +3,12 @@ use anyhow::{
     Result
 };
 
-#[derive(PartialEq,Copy,Clone,Debug)]
+use serde::{
+    Deserialize,
+    Serialize
+};
+
+#[derive(PartialEq,Copy,Clone,Debug,Serialize,Deserialize)]
 pub enum Object {
     Coin,
     Key,

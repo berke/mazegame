@@ -8,11 +8,21 @@ use std::{
     cell::RefMut,
     fs::File,
     path::Path,
-    io::{BufReader,BufRead},
+    io::{
+	BufReader,
+	BufRead,
+	BufWriter,
+	Seek
+    },
     collections::{
 	HashMap,
 	BTreeMap
     }
+};
+
+use serde::{
+    Deserialize,
+    Serialize
 };
 
 use crate::{
@@ -23,7 +33,7 @@ use crate::{
     ptr::*
 };
 
-#[derive(Debug)]
+#[derive(Debug,Serialize,Deserialize)]
 pub struct World {
     pub rooms:BTreeMap<usize,Ptr<Room>>,
     pub start_room:usize,
@@ -38,65 +48,79 @@ impl World {
 	self.start_room = 0
     }
 
+    pub fn save<P:AsRef<Path>>(&self,path:P)->Result<()> {
+	let fd = File::create(path)?;
+	let mut buf = BufWriter::new(fd);
+	ron::ser::to_writer(&mut buf,self)?;
+	Ok(())
+    }
+
     pub fn load<P:AsRef<Path>>(&mut self,path:P)->Result<()> {
 	let fd = File::open(path)?;
 	let mut buf = BufReader::new(fd);
-        let line_number = RefCell::new(0);
-	let mut f = ||->Result<String> {
-	    let mut u = String::new();
-	    let _ = buf.read_line(&mut u)?;
-            let mut ln = line_number.borrow_mut();
-            *ln += 1;
-	    Ok(u.trim_end_matches("\n").to_string())
-	};
-	let g = |u:&str|->Result<usize> {
-	    u.parse::<usize>()
-		.map_err(|_| anyhow!("Bad integer {u} at line {}",
-				     *(line_number.borrow())))
-	};
-	loop {
-	    let line = f()?;
-	    if line.trim_start().starts_with("//") || line.trim_start().is_empty() {
-		continue;
-	    }
-	    let words : Vec<&str> = line.split(' ').collect();
-	    match words[..] {
-		["END"] => break,
-		["CONN",room1,door1,room2,door2] =>
-		    self.connect(g(room1)?,g(door1)?,g(room2)?,g(door2)?),
-		["LOCK",room,door,object] => {
-		    let cs : Vec<char> = object.chars().collect();
-		    let obj = 
-			if cs.len() == 1 {
-			    Object::from_char(cs[0])?
-			} else {
-			    bail!("Invalid object string {:?}",object);
-			};
-		    self.lock_door_with(g(room)?,g(door)?,obj);
-		},
-		["START",room] => self.start_room = g(room)?,
-		["ROOM",id] => {
-		    let name = f()?;
-		    let mut descr : Vec<String> = Vec::new();
-		    loop {
-			let line = f()?;
-			if line.starts_with(" ") {
-			    let (_,rest) = line.split_once(' ').unwrap();
-			    descr.push(rest.to_string());
-			} else if line == "ENDROOM" {
-                            break;
-                        } else {
-                            bail!("Invalid room line");
-                        }
-                    }
-		    let descr_ref : Vec<&str> = descr.iter().map(|x| x.as_str())
-			.collect();
-		    self.add_room(g(id)?,&name,&descr_ref[..]);
-		},
-		_ => bail!("Invalid stanza {:?}",line)
+	if let Ok(this) = ron::de::from_reader::<_,World>(&mut buf) {
+	    self.rooms = this.rooms;
+	    self.start_room = this.start_room;
+	    Ok(())
+	} else {
+	    buf.rewind()?;
+	    let line_number = RefCell::new(0);
+	    let mut f = ||->Result<String> {
+		let mut u = String::new();
+		let _ = buf.read_line(&mut u)?;
+		let mut ln = line_number.borrow_mut();
+		*ln += 1;
+		Ok(u.trim_end_matches("\n").to_string())
 	    };
+	    let g = |u:&str|->Result<usize> {
+		u.parse::<usize>()
+		    .map_err(|_| anyhow!("Bad integer {u} at line {}",
+					 *(line_number.borrow())))
+	    };
+	    loop {
+		let line = f()?;
+		if line.trim_start().starts_with("//") || line.trim_start().is_empty() {
+		    continue;
+		}
+		let words : Vec<&str> = line.split(' ').collect();
+		match words[..] {
+		    ["END"] => break,
+		    ["CONN",room1,door1,room2,door2] =>
+			self.connect(g(room1)?,g(door1)?,g(room2)?,g(door2)?),
+		    ["LOCK",room,door,object] => {
+			let cs : Vec<char> = object.chars().collect();
+			let obj = 
+			    if cs.len() == 1 {
+				Object::from_char(cs[0])?
+			    } else {
+				bail!("Invalid object string {:?}",object);
+			    };
+			self.lock_door_with(g(room)?,g(door)?,obj);
+		    },
+		    ["START",room] => self.start_room = g(room)?,
+		    ["ROOM",id] => {
+			let name = f()?;
+			let mut descr : Vec<String> = Vec::new();
+			loop {
+			    let line = f()?;
+			    if line.starts_with(" ") {
+				let (_,rest) = line.split_once(' ').unwrap();
+				descr.push(rest.to_string());
+			    } else if line == "ENDROOM" {
+				break;
+			    } else {
+				bail!("Invalid room line");
+			    }
+			}
+			let descr_ref : Vec<&str> = descr.iter().map(|x| x.as_str())
+			    .collect();
+			self.add_room(g(id)?,&name,&descr_ref[..]);
+		    },
+		    _ => bail!("Invalid stanza {:?}",line)
+		};
+	    }
+	    Ok(())
 	}
-	Ok(())
     }
 
     pub fn new()->Self {

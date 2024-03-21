@@ -1,3 +1,8 @@
+use serde::{
+    Deserialize,
+    Serialize
+};
+
 use crate::{
     mini_rng::MiniRNG,
     object::Object,
@@ -5,7 +10,7 @@ use crate::{
     tiles::*
 };
 
-#[derive(Debug)]
+#[derive(Debug,Serialize,Deserialize)]
 pub struct Room {
     pub id:usize,
     pub rows:usize,

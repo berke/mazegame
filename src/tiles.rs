@@ -1,8 +1,13 @@
+use serde::{
+    Deserialize,
+    Serialize
+};
+
 use crate::{
     object::Object
 };
 
-#[derive(PartialEq,Copy,Clone,Debug)]
+#[derive(PartialEq,Copy,Clone,Debug,Serialize,Deserialize)]
 pub struct Random {
     pub i:u32,
 }
@@ -13,7 +18,7 @@ impl Random {
     }
 }
 
-#[derive(PartialEq,Copy,Clone,Debug)]
+#[derive(PartialEq,Copy,Clone,Debug,Serialize,Deserialize)]
 pub struct Periodic {
     pub i:u16,
     pub m:u16,
@@ -38,20 +43,20 @@ impl Periodic {
     }
 }
 
-#[derive(PartialEq,Copy,Clone,Debug)]
+#[derive(PartialEq,Copy,Clone,Debug,Serialize,Deserialize)]
 pub struct Target {
     pub room:usize,
     pub door:usize
 }
 
-#[derive(PartialEq,Copy,Clone,Debug)]
+#[derive(PartialEq,Copy,Clone,Debug,Serialize,Deserialize)]
 pub struct Door {
     pub target:Option<Target>,
     pub key:Option<Object>,
     pub locked:bool
 }
 
-#[derive(PartialEq,Copy,Clone,Debug)]
+#[derive(PartialEq,Copy,Clone,Debug,Serialize,Deserialize)]
 pub enum Corner {
     NE,
     SE,
@@ -59,7 +64,7 @@ pub enum Corner {
     SW
 }
 
-#[derive(PartialEq,Copy,Clone,Debug)]
+#[derive(PartialEq,Copy,Clone,Debug,Serialize,Deserialize)]
 pub enum Tile {
     Empty,
     Brick,

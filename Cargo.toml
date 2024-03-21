@@ -25,3 +25,10 @@ features = ["default","all_loaders"]
 version = "0.24"
 default-features = false
 features = ["jpeg","png"]
+
+[dependencies.serde]
+version = "1.0.152"
+features = ["derive"]
+
+[dependencies.ron]
+version = "0.6"
