@@ -14,6 +14,8 @@ pub use eframe::{
 	CentralPanel,
 	Color32,
 	Context,
+	Event,
+	EventFilter,
 	ImageSource,
 	Key,
 	load::{
@@ -23,6 +25,7 @@ pub use eframe::{
 	},
 	include_image,
 	menu,
+	Modifiers,
 	mutex::Mutex,
 	PointerButton,
 	pos2,

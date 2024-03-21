@@ -70,6 +70,15 @@ impl Leved {
     }
 }
 
+const TILE_PALETTE : &'static [(&str,Tile,&str)] = &[
+	(" ",Tile::Empty,"EMPTY"),
+	("%",Tile::Dirt,"DIRT"),
+	("#",Tile::Brick,"BRICK"),
+	("~",Tile::Water(Periodic { i:0,m:8,j:0,n:8 }),"WATER"),
+	(".",Tile::Grass,"GRASS"),
+	("@",Tile::Vortex,"VORTEX"),
+];
+	
 impl eframe::App for Leved {
 	fn update(&mut self,ctx:&Context,frame:&mut eframe::Frame) {
 		CentralPanel::default().show(ctx,|ui| {
@@ -100,12 +109,39 @@ impl eframe::App for Leved {
 							ui.add(&mut self.tv);
 							ui.horizontal(|ui| {
 								let tm = self.tv.get_tool_mut();
-								ui.selectable_value(tm,
-													Tool::Place(Tile::Brick),
-													"# BRICK");
-								ui.selectable_value(tm,
-													Tool::Place(Tile::Water(Periodic::new(8,8))),
-													"~ WATER");
+
+								let event_filter = EventFilter {
+									horizontal_arrows:false,
+									vertical_arrows:false,
+									tab:false,
+									..Default::default()
+								};
+
+								let events = ui.input(
+									|i|
+									i.filtered_events(&event_filter));
+								for event in &events {
+									match event {
+										Event::Text(u) => {
+											for &(key,tile,_) in TILE_PALETTE {
+												let tool = Tool::Place(tile);
+												if key == u {
+													*tm = tool;
+													break;
+												}
+											}
+										},
+										_ => ()
+									}
+								};
+
+								for &(key,tile,name) in TILE_PALETTE {
+									let tool = Tool::Place(tile);
+									ui.selectable_value(
+										tm,
+										tool,
+										format!("{} {}",key,name));
+								}
 							});
 						});
 
