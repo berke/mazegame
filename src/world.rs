@@ -9,7 +9,10 @@ use std::{
     fs::File,
     path::Path,
     io::{BufReader,BufRead},
-    collections::HashMap
+    collections::{
+	HashMap,
+	BTreeMap
+    }
 };
 
 use crate::{
@@ -22,7 +25,7 @@ use crate::{
 
 #[derive(Debug)]
 pub struct World {
-    pub rooms:HashMap<usize,Ptr<Room>>,
+    pub rooms:BTreeMap<usize,Ptr<Room>>,
     pub start_room:usize,
     pub rng:MiniRNG
 }
@@ -97,14 +100,22 @@ impl World {
     }
 
     pub fn new()->Self {
-	World{ rooms:HashMap::new(),
+	World{ rooms:BTreeMap::new(),
 	       start_room:0,
 	       rng:MiniRNG::new(1234) }
     }
 
+    pub fn last_id(&self)->Option<usize> {
+	self.rooms.last_key_value().map(|(&k,_v)| k)
+    }
+
+    pub fn insert_room(&mut self,room:Room) {
+	self.rooms.insert(room.id,Ptr::make(room));
+    }
+
     pub fn add_room(&mut self,id:usize,name:&str,descr:&[&str]) {
 	let room = Room::new(id,name,descr,&mut self.rng);
-	self.rooms.insert(id,Ptr::make(room));
+	self.insert_room(room);
     }
 
     pub fn lock_door_with(&mut self,room:usize,door:usize,obj:Object) {

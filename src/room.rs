@@ -49,6 +49,19 @@ impl Room {
 	}
     }
 
+    pub fn empty(id:usize,rows:usize,cols:usize)->Self {
+	let map = A2::new((rows as isize,cols as isize),Tile::Empty);
+	Self {
+	    id,
+	    rows,
+	    cols,
+	    map,
+	    doors:Vec::new(),
+	    name:format!("Room {}",id),
+	    start:(rows/2,cols/2)
+	}
+    }
+
     pub fn new(id:usize,name:&str,a:&[&str],rng:&mut MiniRNG)->Self {
 	// let a : Vec<&str> = descr.split('\n').collect();
 	let rows = a.len();

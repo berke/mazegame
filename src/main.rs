@@ -22,6 +22,7 @@ use tiles::{
 };
 use object::Object;
 use world::World;
+use room::Room;
 use tile_viewer::{
 	TileViewer,
 	Tool
@@ -305,6 +306,9 @@ impl eframe::App for Leved {
 												  |ui| {
 													  ui.horizontal(|ui| {
 														  if ui.button("ADD").clicked() {
+															  let id = self.world.last_id().unwrap_or(0) + 1;
+															  let room = Room::empty(id,48,48);
+															  self.world.insert_room(room);
 														  }
 													  });
 												  });
