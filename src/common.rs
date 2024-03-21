@@ -10,13 +10,16 @@ pub use std::{
 
 pub use eframe::{
     egui::{
+	Align,
 	Button,
 	CentralPanel,
 	Color32,
 	Context,
 	Event,
 	EventFilter,
+	Grid,
 	ImageSource,
+	Layout,
 	Key,
 	load::{
 	    self,

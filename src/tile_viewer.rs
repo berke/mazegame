@@ -49,6 +49,14 @@ impl TileViewer {
 	self.room = room;
     }
 
+    pub fn room(&self)->Option<Ptr<Room>> {
+	if let Some(p) = &self.room {
+	    Some(Ptr::clone(p))
+	} else {
+	    None
+	}
+    }
+
     pub fn set_tool(&mut self,tool:Tool) {
 	self.tool = tool;
     }
@@ -128,13 +136,13 @@ impl TileViewer {
 	    ui.painter().rect(
 		rect,
 		0.0,
-		Color32::BLACK,
+		Color32::DARK_GREEN,
 		Stroke::NONE
 	    );
 
 	    if let Some(room_ptr) = &self.room {
 		let mut room = room_ptr.yank_mut();
-		ui.text_edit_singleline(&mut room.name);
+		// ui.text_edit_singleline(&mut room.name);
 		let mut map = room.map_mut();
 		let (ny,nx) = map.dims();
 

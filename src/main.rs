@@ -77,6 +77,27 @@ const TILE_PALETTE : &'static [(&str,Tile,&str)] = &[
 	("~",Tile::Water(Periodic { i:0,m:8,j:0,n:8 }),"WATER"),
 	(".",Tile::Grass,"GRASS"),
 	("@",Tile::Vortex,"VORTEX"),
+	("*",Tile::PyramidStone,"PYRAMID"),
+	("W",Tile::Window,"WINDOW"),
+	("F",Tile::Fire(Periodic { i:0,m:3,j:0,n:2 }),"FIRE"),
+	("q",Tile::MetalRamp(Corner::NW),"METAL NW"),
+	("w",Tile::MetalRamp(Corner::NE),"METAL NE"),
+	("a",Tile::MetalRamp(Corner::SW),"METAL SW"),
+	("s",Tile::MetalRamp(Corner::SE),"METAL SE"),
+	("m",Tile::Metal,"METAL"),
+	("A",Tile::Alien,"ALIEN"),
+	("x",Tile::MetalFoot,"METAL FOOT"),
+	("^",Tile::Sky(Random { i:1 }),"SKY"),
+	("D",Tile::Door(Door { target:None, key:None, locked:false }),"DOOR"),
+	("K",Tile::Object(Object::Key),"KEY"),
+	("T",Tile::Object(Object::ToyCar),"TOY CAR"),
+	("I",Tile::Object(Object::IceCream),"ICECREAM"),
+	("C",Tile::Object(Object::Coin),"COIN"),
+	("S",Tile::Object(Object::SquaresAndTriangles),"SQ&TR"),
+	("c",Tile::Object(Object::Carrot),"CARROT"),
+	("t",Tile::Object(Object::Tomato),"TOMATO"),
+	("e",Tile::Object(Object::Eggplant),"EGGPLANT"),
+	("b",Tile::Object(Object::Banana),"BANANA"),
 ];
 	
 impl eframe::App for Leved {
@@ -88,26 +109,34 @@ impl eframe::App for Leved {
 				.horizontal(|mut strip| {
 					strip.cell(|ui| {
 						ui.vertical(|ui| {
-							if ui.button("Load").clicked() {
-								let patho = rfd::FileDialog::new().pick_file()
-									.map(|pb| pb
-										 .into_os_string()
-										 .into_string()
-										 .unwrap_or_else(|_| "WTF".to_string()));
-								if let Some(path) = patho {
-									self.world.clear();
-									match self.world.load(path) {
-										Err(e) => eprintln!("Error: {}",e),
-										Ok(()) => {
-											if let Some(room) = self.world.rooms.get(&self.world.start_room) {
-												self.tv.set_room(Some(Ptr::clone(room)));
-											}
-										}
-									}
-								}
-							}
-							ui.add(&mut self.tv);
 							ui.horizontal(|ui| {
+								if let Some(room_ptr) = self.tv.room() {
+									let mut room = room_ptr.yank_mut();
+									ui.text_edit_singleline(&mut room.name);
+								} else {
+									ui.label("(No name)");
+								}
+
+								ui.with_layout(
+									Layout::right_to_left(Align::Center),
+									|ui| {
+										ui.horizontal(|ui| {
+											if ui.button("CONN").clicked() {
+											}
+											if ui.button("UDW").clicked() {
+											}
+											if ui.button("ID").clicked() {
+											}
+										});
+									});
+							});
+							
+							ScrollArea::both()
+								.show(ui,|ui| {
+									ui.add(&mut self.tv);
+								});
+
+							ui.vertical(|ui| {
 								let tm = self.tv.get_tool_mut();
 
 								let event_filter = EventFilter {
@@ -135,13 +164,52 @@ impl eframe::App for Leved {
 									}
 								};
 
-								for &(key,tile,name) in TILE_PALETTE {
-									let tool = Tool::Place(tile);
-									ui.selectable_value(
-										tm,
-										tool,
-										format!("{} {}",key,name));
-								}
+								ui.separator();
+
+								let num_rows = 8;
+								Grid::new("palette")
+									.show(
+										ui,
+										|ui| {
+											let mut j = 0;
+											for &(key,tile,name) in TILE_PALETTE {
+												let tool = Tool::Place(tile);
+												ui.selectable_value(
+													tm,
+													tool,
+													format!("{} {}",key,name));
+												j += 1;
+												if j == num_rows {
+													ui.end_row();
+													j = 0;
+												}
+											}
+										});
+
+								ui.separator();
+
+								ui.horizontal(|ui| {
+									if ui.button("SAVE").clicked() {
+									}
+									if ui.button("LOAD").clicked() {
+										let patho = rfd::FileDialog::new().pick_file()
+											.map(|pb| pb
+												 .into_os_string()
+												 .into_string()
+												 .unwrap_or_else(|_| "WTF".to_string()));
+										if let Some(path) = patho {
+											self.world.clear();
+											match self.world.load(path) {
+												Err(e) => eprintln!("Error: {}",e),
+												Ok(()) => {
+													if let Some(room) = self.world.rooms.get(&self.world.start_room) {
+														self.tv.set_room(Some(Ptr::clone(room)));
+													}
+												}
+											}
+										}
+									}
+								});
 							});
 						});
 
@@ -152,6 +220,18 @@ impl eframe::App for Leved {
 							.show(ui,
 								  |ui| {
 									  ui.vertical(|ui| {
+										  ui.horizontal(|ui| {
+											  ui.label("Rooms");
+											  ui.with_layout(
+												  Layout::right_to_left(Align::Center),
+												  |ui| {
+													  ui.horizontal(|ui| {
+														  if ui.button("ADD").clicked() {
+														  }
+													  });
+												  });
+										  });
+										  ui.separator();
 										  for (iroom,room_ptr) in self.world.rooms.iter() {
 											  let room = room_ptr.yank();
 											  ui.horizontal(|ui| {
