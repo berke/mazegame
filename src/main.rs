@@ -1,7 +1,10 @@
-//#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
 #![allow(unsafe_code)]
 #![allow(unused_imports)]
 #![allow(dead_code)]
+
+mod object;
+mod tiles;
+mod a2;
 
 use anyhow::{
     Result
@@ -15,21 +18,51 @@ use std::{
 
 use eframe::{
     egui::{
-	self,
 	Button,
-	menu,
+	CentralPanel,
+	Color32,
+	Context,
 	ImageSource,
-	mutex::Mutex,
 	Key,
-	Vec2
+	load::{
+	    self,
+	    SizeHint,
+	    TexturePoll
+	},
+	include_image,
+	menu,
+	mutex::Mutex,
+	pos2,
+	Pos2,
+	Rect,
+	Response,
+	self,
+	Sense,
+	Stroke,
+	TextureHandle,
+	TextureOptions,
+	Ui,
+	vec2,
+	Vec2,
+	ViewportBuilder,
+	Widget
     },
     egui_glow,
     glow
 };
 
+use a2::A2;
+use tiles::{
+    Corner,
+    Door,
+    Tile,
+    Random
+};
+use object::Object;
+
 fn main()->Result<(), eframe::Error> {
     let options = eframe::NativeOptions {
-	viewport:egui::ViewportBuilder::default()
+	viewport:ViewportBuilder::default()
 	    .with_inner_size([500.0,800.0]),
 	multisampling:4,
 	renderer:eframe::Renderer::Glow,
@@ -46,7 +79,7 @@ fn main()->Result<(), eframe::Error> {
 }
 
 struct Leved {
-    tex:Option<egui::TextureHandle>,
+    tex:Option<TextureHandle>,
     frame_rate:f32,
     play:bool,
     tv:TileViewer
@@ -55,85 +88,165 @@ struct Leved {
 impl Leved {
     fn new(_cc:&eframe::CreationContext<'_>)->Self {
 	let tv = TileViewer::new();
-	let mut this =
-	    Self {
-		tex:None,
-		frame_rate:10.0,
-		play:false,
-		tv
-	    };
-	this
+	Self {
+	    tex:None,
+	    frame_rate:10.0,
+	    play:false,
+	    tv
+	}
     }
 }
 
 pub struct TileViewer {
-    img:Option<egui::load::TexturePoll>,
-    tile_size:egui::Vec2,
-    nx:usize,
-    ny:usize
+    img:Option<load::TexturePoll>,
+    tile_size:Vec2,
+    map:A2<Tile>,
+    rainbow_index:usize
+}
+
+#[derive(Copy,Clone)]
+enum TileAspect {
+    FromImage(Vec2,Vec2),
+    Solid(Color32)
 }
 
 impl TileViewer {
+    const RAINBOW : &'static [Color32] = &[
+	Color32::from_rgb(255,  0,  0),
+	Color32::from_rgb(255,255,  0),
+	Color32::from_rgb(  0,255,  0),
+	Color32::from_rgb(  0,255,255),
+	Color32::from_rgb(  0,  0,255),
+	Color32::from_rgb(255,  0,255),
+    ];
+
     pub fn new()->Self {
 	let img = None;
-	let tile_size = egui::vec2(16.0,16.0);
-	let nx = 16;
-	let ny = 16;
-	Self { img,tile_size,nx,ny }
+	let tile_size = vec2(32.0,32.0);
+	let map = A2::new((16,16),Tile::Empty);
+	Self { img,tile_size,map,rainbow_index:0 }
     }
 
-    pub fn do_ui(&mut self,ui:&mut egui::Ui)->egui::Response {
-	let desired_size = egui::vec2(self.nx as f32,self.ny as f32)*
-	    self.tile_size;
+    pub fn find_tile(&self,tl:Tile)->TileAspect {
+	let (tw,th) = (16,16);
+	let vec = |u,v| vec2((v*tw) as f32,(u*th) as f32);
+	let tile = |u,v| {
+	    let p0 = vec(u,v);
+	    let p1 = vec(u+1,v+1);
+	    TileAspect::FromImage(p0,p1)
+	};
+	let fill = |c| TileAspect::Solid(c);
+	match tl {
+	    Tile::Fire(p) => tile(4+p.i,4),
+	    Tile::Brick => tile(0,0),
+	    Tile::Metal => tile(0,12),
+	    Tile::Alien => tile(0,14),
+	    Tile::Sky(Random{ i }) => tile(i as u16,10),
+	    Tile::MetalRamp(Corner::NW) => tile(2,13),
+	    Tile::MetalRamp(Corner::NE) => tile(2,12),
+	    Tile::MetalRamp(Corner::SW) => tile(1,12),
+	    Tile::MetalRamp(Corner::SE) => tile(1,13),
+	    Tile::MetalFoot => tile(3,12),
+	    Tile::Object(o) => match o {
+		Object::Coin => tile(0,1),
+		Object::IceCream => tile(0,3),
+		Object::Key => tile(0,4),
+		Object::ToyCar => tile(0,5),
+		Object::SquaresAndTriangles => tile(0,6),
+		Object::Tomato => tile(1,5),
+		Object::Eggplant => tile(1,6),
+		Object::Banana => tile(1,7),
+		Object::Carrot => tile(1,8)
+	    },
+	    Tile::Door(Door{ key:None, .. }) => tile(0,2),
+	    Tile::Door(Door{ key:Some(_), locked:true, ..}) => tile(1,3),
+	    Tile::Door(Door{ key:Some(_), locked:false, ..}) => tile(1,4),
+	    Tile::Vortex => tile(0,7),
+	    Tile::Grass => tile(0,8),
+	    Tile::Dirt => tile(2,8),
+	    Tile::PyramidStone => tile(3,8),
+	    Tile::Window => tile(0,11),
+	    Tile::Water(p) => tile(p.i,9),
+	    Tile::Empty => fill(Color32::BLACK),
+	    Tile::Rainbow => fill(Self::RAINBOW[self.rainbow_index]),
+	}
+    }
+
+    pub fn do_ui(&mut self,ui:&mut Ui)->Response {
+	let (ny,nx) = self.map.dims();
+	let desired_size = vec2(nx as f32,ny as f32)*self.tile_size;
 	let (rect,mut response) = ui.allocate_exact_size(desired_size,
-							 egui::Sense::click());
+							 Sense::click());
 	if ui.is_rect_visible(rect) {
-	    let mut painter = ui.painter();
+	    let painter = ui.painter();
 
 	    painter.rect(
 		rect,
 		0.0,
-		egui::Color32::DARK_GREEN,
-		egui::Stroke::NONE
+		Color32::BLACK,
+		Stroke::NONE
 	    );
 	    
-	    let tpoll = self.img.get_or_insert_with(|| {
-		egui::include_image!("../gfx/tiles.png")
+	    // let tpoll =
+	    self.img.get_or_insert_with(|| {
+		include_image!("../gfx/tiles.png")
 		    .load(
 			ui.ctx(),
-			egui::TextureOptions::NEAREST,
-			egui::load::SizeHint::Size(32,32))
+			TextureOptions::NEAREST,
+			load::SizeHint::Size(32,32))
 		    .expect("Can't load image")
 	    });
 
-	    if let Some(tid) = tpoll.texture_id() {
-		painter.image(
-		    tid,
-		    rect,
-		    egui::Rect::from_min_max(egui::pos2(0.0,0.0),egui::pos2(1.0,1.0)),
-		    egui::Color32::WHITE
-		);
-	    }
+	    let p0 = rect.left_top();
 
+	    for iy in 0..ny {
+		for ix in 0..nx {
+		    let p1 = p0 + vec2(ix as f32,iy as f32)*self.tile_size;
+		    let p2 = p1 + self.tile_size;
+		    let rect = Rect::from_points(&[p1,p2]);
+		    match self.find_tile(self.map[[iy,ix]]) {
+			TileAspect::Solid(color) => {
+			    painter.rect(
+				Rect::from_points(&[p1,p2]),
+				0.0,
+				color,
+				Stroke::NONE
+			    );
+			},
+			TileAspect::FromImage(q0,q1) => {
+			    if let Some(TexturePoll::Ready { texture }) = self.img {
+				let u0 = q0/texture.size;
+				let u1 = q1/texture.size;
+				let uv = Rect::from_points(&[u0.to_pos2(),u1.to_pos2()]);
+				painter.image(
+				    texture.id,
+				    rect,
+				    uv,
+				    Color32::WHITE
+				);
+			    }
+			}
+		    }
+		}
+	    }
 	}
 	response
     }
 }
 
-impl egui::Widget for &mut TileViewer {
-    fn ui(self,ui:&mut egui::Ui)->egui::Response {
+impl Widget for &mut TileViewer {
+    fn ui(self,ui:&mut Ui)->Response {
 	self.do_ui(ui)
     }
 }
 
 impl eframe::App for Leved {
-    fn update(&mut self,ctx:&egui::Context,_frame:&mut eframe::Frame) {
+    fn update(&mut self,ctx:&Context,_frame:&mut eframe::Frame) {
 	// let x0 = self.x0;
 	// let x1 = self.x1;
 	// let y0 = self.y0;
 	// let y1 = self.y1;
-	let mut step_it = false;
-	egui::CentralPanel::default().show(ctx,|ui| {
+	CentralPanel::default().show(ctx,|ui| {
 	    let _ = ui.checkbox(&mut self.play,
 				"Play");
 
@@ -169,7 +282,7 @@ impl eframe::App for Leved {
 	    // 	    data[k + 3] = 255;
 	    // 	};
 
-	    // 	let cimg = egui::ColorImage::from_rgba_unmultiplied(
+	    // 	let cimg = ColorImage::from_rgba_unmultiplied(
 	    // 	    [nx as usize,
 	    // 	     ny as usize],&data);
 	    // 	ctx.load_texture(
