@@ -33,7 +33,7 @@ fn main()->Result<(), eframe::Error> {
 	let options = eframe::NativeOptions {
 		viewport:ViewportBuilder::default()
 			.with_maximized(true)
-			.with_inner_size([1440.0,768.0]),
+			.with_inner_size([1440.0,1024.0]),
 		multisampling:0,
 		centered:true,
 		// renderer:eframe::Renderer::Glow,
@@ -76,63 +76,60 @@ impl eframe::App for Leved {
 			StripBuilder::new(ui)
 				.size(Size::remainder().at_least(700.0))
 				.size(Size::exact(300.0))
-				.horizontal(
-					|mut strip| {
-						strip.cell(|ui| {
-							ui.vertical(|ui| {
-								if ui.button("Load").clicked() {
-									let patho = rfd::FileDialog::new().pick_file()
-										.map(|pb| pb
-											 .into_os_string()
-											 .into_string()
-											 .unwrap_or_else(|_| "WTF".to_string()));
-									if let Some(path) = patho {
-										self.world.clear();
-										match self.world.load(path) {
-											Err(e) => eprintln!("Error: {}",e),
-											Ok(()) => {
-												if let Some(room) = self.world.rooms.get(&self.world.start_room) {
-													self.tv.set_room(Some(Ptr::clone(room)));
-												}
+				.horizontal(|mut strip| {
+					strip.cell(|ui| {
+						ui.vertical(|ui| {
+							if ui.button("Load").clicked() {
+								let patho = rfd::FileDialog::new().pick_file()
+									.map(|pb| pb
+										 .into_os_string()
+										 .into_string()
+										 .unwrap_or_else(|_| "WTF".to_string()));
+								if let Some(path) = patho {
+									self.world.clear();
+									match self.world.load(path) {
+										Err(e) => eprintln!("Error: {}",e),
+										Ok(()) => {
+											if let Some(room) = self.world.rooms.get(&self.world.start_room) {
+												self.tv.set_room(Some(Ptr::clone(room)));
 											}
 										}
 									}
 								}
-								ui.add(&mut self.tv);
-								ui.horizontal(|ui| {
-									if ui.button("#").clicked() {
-										self.tv.set_tool(Tool::Place(Tile::Brick));
-									}
-									if ui.button("~").clicked() {
-										self.tv.set_tool(Tool::Place(Tile::Water(Periodic::new(8,8))));
-									}
-									if ui.button("W").clicked() {
-										self.tv.set_tool(Tool::Place(Tile::Window));
-									}
-								});
+							}
+							ui.add(&mut self.tv);
+							ui.horizontal(|ui| {
+								let tm = self.tv.get_tool_mut();
+								ui.selectable_value(tm,
+													Tool::Place(Tile::Brick),
+													"# BRICK");
+								ui.selectable_value(tm,
+													Tool::Place(Tile::Water(Periodic::new(8,8))),
+													"~ WATER");
 							});
+						});
 
-						});
-						strip.cell(|ui| {
-							ScrollArea::vertical()
-								.auto_shrink(false)
-								.show(ui,
-									  |ui| {
-										  ui.vertical(|ui| {
-											  for (iroom,room_ptr) in self.world.rooms.iter() {
-												  let room = room_ptr.yank();
-												  ui.horizontal(|ui| {
-													  ui.monospace(format!("{:8}",iroom));
-													  ui.separator();
-													  if ui.button(&room.name).clicked() {
-														  self.tv.set_room(Some(Ptr::clone(&room_ptr)));
-													  }
-												  });
-											  };
-										  });
-									  });
-						});
 					});
+					strip.cell(|ui| {
+						ScrollArea::vertical()
+							.auto_shrink(false)
+							.show(ui,
+								  |ui| {
+									  ui.vertical(|ui| {
+										  for (iroom,room_ptr) in self.world.rooms.iter() {
+											  let room = room_ptr.yank();
+											  ui.horizontal(|ui| {
+												  ui.monospace(format!("{:8}",iroom));
+												  ui.separator();
+												  if ui.button(&room.name).clicked() {
+													  self.tv.set_room(Some(Ptr::clone(&room_ptr)));
+												  }
+											  });
+										  };
+									  });
+								  });
+					});
+				});
 		});
 	}
 }

@@ -13,7 +13,7 @@ use crate::{
     room::Room
 };
 
-#[derive(Copy,Clone)]
+#[derive(Copy,Clone,PartialEq)]
 pub enum Tool {
     Place(Tile)
 }
@@ -25,6 +25,7 @@ pub struct TileViewer {
     tile_size:Vec2,
     room:Option<Ptr<Room>>,
     rainbow_index:usize,
+    selection:Option<(isize,isize)>,
     tool:Tool
 }
 
@@ -52,13 +53,22 @@ impl TileViewer {
 	self.tool = tool;
     }
 
+    pub fn get_tool_mut(&mut self)->&mut Tool {
+	&mut self.tool
+    }
+
     pub fn new()->Self {
 	let img = None;
 	let tile_size = vec2(32.0,32.0);
 	let map = A2::new((16,16),Tile::Empty);
-	let ny = 32;
-	let nx = 40;
-	Self { img,tile_size,rainbow_index:0,room:None,ny,nx,
+	let ny = 24;
+	let nx = 48;
+	Self { img,tile_size,
+	       rainbow_index:0,
+	       room:None,
+	       ny,
+	       nx,
+	       selection:None,
 	       tool:Tool::Place(Tile::Empty) }
     }
 
@@ -108,10 +118,11 @@ impl TileViewer {
     }
 
     pub fn do_ui(&mut self,ui:&mut Ui)->Response {
-	let (ny,nx) = (self.ny,self.nx); // map.dims();
+	let (ny,nx) = (self.ny,self.nx);
 	let desired_size = vec2(nx as f32,ny as f32)*self.tile_size;
-	let (rect,mut response) = ui.allocate_exact_size(desired_size,
-							 Sense::click_and_drag());
+	let (rect,mut response) =
+	    ui.allocate_exact_size(desired_size,
+				   Sense::click_and_drag());
 
 	if ui.is_rect_visible(rect) {
 	    ui.painter().rect(
@@ -127,7 +138,6 @@ impl TileViewer {
 		let mut map = room.map_mut();
 		let (ny,nx) = map.dims();
 
-		// let tpoll =
 		self.img.get_or_insert_with(|| {
 		    include_image!("../gfx/tiles.png")
 			.load(
@@ -140,17 +150,31 @@ impl TileViewer {
 		let p0 = rect.left_top();
 
 		if response.is_pointer_button_down_on() {
-		    if let Some(p) = response.interact_pointer_pos() {
-			let r = (p - p0) / self.tile_size;
-			let iy = r[1].floor() as isize;
-			let ix = r[0].floor() as isize;
-			if 0 <= iy && iy < ny && 0 <= ix && ix < nx {
-			    match self.tool {
-				Tool::Place(tile) => map[[iy,ix]] = tile
+		    ui.input(|input| {
+			if let Some(p) = response.interact_pointer_pos() {
+			    let r = (p - p0) / self.tile_size;
+			    let iy = r[1].floor() as isize;
+			    let ix = r[0].floor() as isize;
+			    if 0 <= iy && iy < ny && 0 <= ix && ix < nx {
+				if input.pointer
+				    .button_down(PointerButton::Primary) {
+					match self.tool {
+					    Tool::Place(tile) =>
+						map[[iy,ix]] = tile
+					}
+				    } else if input.pointer
+				    .button_pressed(PointerButton::Secondary) {
+					let new_sel = Some((iy,ix));
+					if self.selection == new_sel {
+					    self.selection = None;
+					} else {
+					    self.selection = new_sel;
+					}
+				    }
 			    }
 			}
-		    }
-		}
+		    })
+		};
 
 		for iy in 0..ny {
 		    for ix in 0..nx {
@@ -167,19 +191,28 @@ impl TileViewer {
 				);
 			    },
 			    TileAspect::FromImage(q0,q1) => {
-				if let Some(TexturePoll::Ready { texture }) = self.img {
-				    let ts = texture.size;
-				    let u0 = q0/ts;
-				    let u1 = q1/ts;
-				    let uv = Rect::from_points(&[u0.to_pos2(),u1.to_pos2()]);
-				    ui.painter().image(
-					texture.id,
-					rect,
-					uv,
-					Color32::WHITE
-				    );
-				}
+				if let Some(TexturePoll::Ready { texture })
+				    = self.img {
+					let ts = texture.size;
+					let u0 = q0/ts;
+					let u1 = q1/ts;
+					let uv = Rect::from_points(
+					    &[u0.to_pos2(),u1.to_pos2()]);
+					ui.painter().image(
+					    texture.id,
+					    rect,
+					    uv,
+					    Color32::WHITE
+					);
+				    }
 			    }
+			}
+			if Some((iy,ix)) == self.selection {
+			    ui.painter().rect_stroke(
+				Rect::from_points(&[p1,p2]),
+				0.0,
+				Stroke::new(2.0,Color32::GREEN)
+			    );
 			}
 		    }
 		}

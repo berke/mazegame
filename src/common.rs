@@ -24,6 +24,7 @@ pub use eframe::{
 	include_image,
 	menu,
 	mutex::Mutex,
+	PointerButton,
 	pos2,
 	Pos2,
 	Rect,
