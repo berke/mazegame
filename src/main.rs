@@ -29,7 +29,7 @@ fn main()->Result<(), eframe::Error> {
     let options = eframe::NativeOptions {
 	viewport:ViewportBuilder::default()
 	    .with_inner_size([500.0,800.0]),
-	multisampling:4,
+	multisampling:0,
 	renderer:eframe::Renderer::Glow,
 	..Default::default()
     };

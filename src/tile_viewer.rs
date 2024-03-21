@@ -46,7 +46,7 @@ impl TileViewer {
 	let img = None;
 	let tile_size = vec2(32.0,32.0);
 	let map = A2::new((16,16),Tile::Empty);
-	let ny = 32;
+	let ny = 24;
 	let nx = 32;
 	Self { img,tile_size,rainbow_index:0,room:None,ny,nx }
     }
@@ -102,9 +102,7 @@ impl TileViewer {
 	let (rect,mut response) = ui.allocate_exact_size(desired_size,
 							 Sense::click());
 	if ui.is_rect_visible(rect) {
-	    let painter = ui.painter();
-
-	    painter.rect(
+	    ui.painter().rect(
 		rect,
 		0.0,
 		Color32::BLACK,
@@ -112,7 +110,8 @@ impl TileViewer {
 	    );
 
 	    if let Some(room_ptr) = &self.room {
-		let room = room_ptr.yank();
+		let mut room = room_ptr.yank_mut();
+		ui.text_edit_singleline(&mut room.name);
 		let map = room.map();
 		let (ny,nx) = map.dims();
 
@@ -135,7 +134,7 @@ impl TileViewer {
 			let rect = Rect::from_points(&[p1,p2]);
 			match self.find_tile(map[[iy,ix]]) {
 			    TileAspect::Solid(color) => {
-				painter.rect(
+				ui.painter().rect(
 				    Rect::from_points(&[p1,p2]),
 				    0.0,
 				    color,
@@ -147,7 +146,7 @@ impl TileViewer {
 				    let u0 = q0/texture.size;
 				    let u1 = q1/texture.size;
 				    let uv = Rect::from_points(&[u0.to_pos2(),u1.to_pos2()]);
-				    painter.image(
+				    ui.painter().image(
 					texture.id,
 					rect,
 					uv,
