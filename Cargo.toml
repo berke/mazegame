@@ -1,0 +1,27 @@
+[package]
+name = "leved"
+version = "0.1.0"
+authors = ["Berke DURAK <bd@exhrd.fr>"]
+license = "Proprietary"
+edition = "2021"
+rust-version = "1.72"
+
+[dependencies.anyhow]
+version = "1"
+
+[dependencies.eframe]
+version = "0.26.2"
+default-features = false
+features = ["default"]
+
+[dependencies.rfd]
+version = "0.13"
+
+[dependencies.egui_extras]
+version = "*"
+features = ["default","all_loaders"]
+
+[dependencies.image]
+version = "0.24"
+default-features = false
+features = ["jpeg","png"]
