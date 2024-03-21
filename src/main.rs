@@ -26,7 +26,10 @@ use tile_viewer::{
 	TileViewer,
 	Tool
 };
-use tiles::Periodic;
+use tiles::{
+	Periodic,
+	Target
+};
 use ptr::*;
 
 fn main()->Result<(), eframe::Error> {
@@ -49,25 +52,42 @@ fn main()->Result<(), eframe::Error> {
     )
 }
 
+struct DoorEditor {
+	room:usize,
+	indices:(isize,isize),
+	door:Door,
+}
+
 struct Leved {
     world:World,
     tex:Option<TextureHandle>,
     frame_rate:f32,
     play:bool,
-    tv:TileViewer
+    tv:TileViewer,
+	message:String,
+	door_props_open:bool,
+	door_editor:Option<DoorEditor>
 }
 
 impl Leved {
-    fn new(_cc:&eframe::CreationContext<'_>)->Self {
-	let tv = TileViewer::new();
-	Self {
-	    tex:None,
-	    frame_rate:10.0,
-	    play:false,
-	    world:World::new(),
-	    tv
+	fn new(_cc:&eframe::CreationContext<'_>)->Self {
+		let tv = TileViewer::new();
+		Self {
+			tex:None,
+			frame_rate:10.0,
+			play:false,
+			world:World::new(),
+			tv,
+			message:String::new(),
+			door_props_open:false,
+			door_editor:None
+		}
 	}
-    }
+
+	fn message(&mut self,msg:&str) {
+		self.message.clear();
+		self.message.push_str(msg);
+	}
 }
 
 const TILE_PALETTE : &'static [(&str,Tile,&str)] = &[
@@ -101,8 +121,41 @@ const TILE_PALETTE : &'static [(&str,Tile,&str)] = &[
 ];
 	
 impl eframe::App for Leved {
-	fn update(&mut self,ctx:&Context,frame:&mut eframe::Frame) {
+	fn update(&mut self,ctx:&Context,_frame:&mut eframe::Frame) {
 		CentralPanel::default().show(ctx,|ui| {
+			Window::new("Edit door")
+				.open(&mut self.door_props_open)
+				.vscroll(false)
+				.default_width(400.0)
+				.default_height(300.0)
+				.default_pos(ctx.screen_rect().center())
+				.movable(true)
+				.show(ctx, |ui| {
+					if let Some(ded) = self.door_editor.as_mut() {
+						ui.horizontal(|ui| {
+							let target =
+								if let Some(Target { room,door }) = ded.door.target {
+									format!("Room {} door {}",room,door)
+								} else {
+									format!("Nowhere!")
+								};
+							ui.label(format!("Goes to: {}",target));
+							if ui.button("Change").clicked() {
+							}
+						});
+
+						ui.checkbox(&mut ded.door.locked,"Locked");
+					} else {
+						ui.label("We are not editing a door right now.");
+					}
+					if ui.button("Change the door").clicked() {
+						// if let Some(room_ptr) = self.tv.room() {
+						// 	let mut room = room_ptr.yank_mut();
+						// 	if let Some((iy,ix)) = self.tv.selection1() {
+						// 	}
+						// }
+					}
+				});
 			StripBuilder::new(ui)
 				.size(Size::remainder().at_least(700.0))
 				.size(Size::exact(300.0))
@@ -124,8 +177,30 @@ impl eframe::App for Leved {
 											if ui.button("CONN").clicked() {
 											}
 											if ui.button("UDW").clicked() {
+
 											}
 											if ui.button("ID").clicked() {
+												if let Some(room_ptr) = self.tv.room() {
+													let room = room_ptr.yank_mut();
+													if let Some((iy,ix)) = self.tv.selection1() {
+														let map = room.map();
+														if let Tile::Door(door) = map[[iy,ix]] {
+															self.door_editor =
+																Some(DoorEditor {
+																	room:room.id,
+																	indices:(iy,ix),
+																	door
+																});
+															self.door_props_open = true;
+														} else {
+															self.message("This is not a door!");
+														}
+													} else {
+														self.message("You have to select a tile by right-clicking");
+													}
+												} else {
+													self.message("There is no room");
+												}
 											}
 										});
 									});
@@ -141,83 +216,81 @@ impl eframe::App for Leved {
 									ui.add(&mut self.tv);
 								});
 
-							ui.vertical(|ui| {
-								let tm = self.tv.get_tool_mut();
+							let tm = self.tv.get_tool_mut();
 
-								let event_filter = EventFilter {
-									horizontal_arrows:false,
-									vertical_arrows:false,
-									tab:false,
-									..Default::default()
-								};
+							let event_filter = EventFilter {
+								horizontal_arrows:false,
+								vertical_arrows:false,
+								tab:false,
+								..Default::default()
+							};
 
-								let events = ui.input(
-									|i|
-									i.filtered_events(&event_filter));
-								for event in &events {
-									match event {
-										Event::Text(u) => {
-											for &(key,tile,_) in TILE_PALETTE {
-												let tool = Tool::Place(tile);
-												if key == u {
-													*tm = tool;
-													break;
-												}
+							let events = ui.input(
+								|i|
+								i.filtered_events(&event_filter));
+							for event in &events {
+								match event {
+									Event::Text(u) => {
+										for &(key,tile,_) in TILE_PALETTE {
+											let tool = Tool::Place(tile);
+											if key == u {
+												*tm = tool;
+												break;
 											}
-										},
-										_ => ()
-									}
-								};
+										}
+									},
+									_ => ()
+								}
+							};
 
-								ui.separator();
+							ui.separator();
+							ui.label(&self.message);
 
-								let num_rows = 8;
-								Grid::new("palette")
-									.show(
-										ui,
-										|ui| {
-											let mut j = 0;
-											for &(key,tile,name) in TILE_PALETTE {
-												let tool = Tool::Place(tile);
-												ui.selectable_value(
-													tm,
-													tool,
-													format!("{} {}",key,name));
-												j += 1;
-												if j == num_rows {
-													ui.end_row();
-													j = 0;
-												}
+							ui.separator();
+							let num_rows = 8;
+							Grid::new("palette")
+								.show(
+									ui,
+									|ui| {
+										let mut j = 0;
+										for &(key,tile,name) in TILE_PALETTE {
+											let tool = Tool::Place(tile);
+											ui.selectable_value(
+												tm,
+												tool,
+												format!("{} {}",key,name));
+											j += 1;
+											if j == num_rows {
+												ui.end_row();
+												j = 0;
 											}
-										});
+										}
+									});
 
-								ui.separator();
-
-								ui.horizontal(|ui| {
-									if ui.button("SAVE").clicked() {
-									}
-									if ui.button("LOAD").clicked() {
-										let patho = rfd::FileDialog::new().pick_file()
-											.map(|pb| pb
-												 .into_os_string()
-												 .into_string()
-												 .unwrap_or_else(|_| "WTF".to_string()));
-										if let Some(path) = patho {
-											self.world.clear();
-											match self.world.load(path) {
-												Err(e) => eprintln!("Error: {}",e),
-												Ok(()) => {
-													if let Some(room) = self.world.rooms.get(&self.world.start_room) {
-														self.tv.set_room(Some(Ptr::clone(room)));
-													}
+							ui.separator();
+							ui.horizontal(|ui| {
+								if ui.button("SAVE").clicked() {
+								}
+								if ui.button("LOAD").clicked() {
+									let patho = rfd::FileDialog::new().pick_file()
+										.map(|pb| pb
+											 .into_os_string()
+											 .into_string()
+											 .unwrap_or_else(|_| "WTF".to_string()));
+									if let Some(path) = patho {
+										self.world.clear();
+										match self.world.load(path) {
+											Err(e) => eprintln!("Error: {}",e),
+											Ok(()) => {
+												if let Some(room) = self.world.rooms.get(&self.world.start_room) {
+													self.tv.set_room(Some(Ptr::clone(room)));
 												}
 											}
 										}
 									}
-								});
+								}
 							});
 						});
-
 					});
 					strip.cell(|ui| {
 						ScrollArea::vertical()

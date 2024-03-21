@@ -25,7 +25,8 @@ pub struct TileViewer {
     tile_size:Vec2,
     room:Option<Ptr<Room>>,
     rainbow_index:usize,
-    selection:Option<(isize,isize)>,
+    selection1:Option<(isize,isize)>,
+    selection2:Option<(isize,isize)>,
     tool:Tool
 }
 
@@ -68,7 +69,6 @@ impl TileViewer {
     pub fn new()->Self {
 	let img = None;
 	let tile_size = vec2(32.0,32.0);
-	let map = A2::new((16,16),Tile::Empty);
 	let ny = 48;
 	let nx = 48;
 	Self { img,tile_size,
@@ -76,8 +76,17 @@ impl TileViewer {
 	       room:None,
 	       ny,
 	       nx,
-	       selection:None,
+	       selection1:None,
+	       selection2:None,
 	       tool:Tool::Place(Tile::Empty) }
+    }
+
+    pub fn selection1(&self)->Option<(isize,isize)> {
+	self.selection1
+    }
+
+    pub fn selection2(&self)->Option<(isize,isize)> {
+	self.selection2
     }
 
     fn find_tile(&self,tl:Tile)->TileAspect {
@@ -128,7 +137,7 @@ impl TileViewer {
     pub fn do_ui(&mut self,ui:&mut Ui)->Response {
 	let (ny,nx) = (self.ny,self.nx);
 	let desired_size = vec2(nx as f32,ny as f32)*self.tile_size;
-	let (rect,mut response) =
+	let (rect,response) =
 	    ui.allocate_exact_size(desired_size,
 				   Sense::click_and_drag());
 
@@ -143,7 +152,7 @@ impl TileViewer {
 	    if let Some(room_ptr) = &self.room {
 		let mut room = room_ptr.yank_mut();
 		// ui.text_edit_singleline(&mut room.name);
-		let mut map = room.map_mut();
+		let map = room.map_mut();
 		let (ny,nx) = map.dims();
 
 		self.img.get_or_insert_with(|| {
@@ -172,11 +181,17 @@ impl TileViewer {
 					}
 				    } else if input.pointer
 				    .button_pressed(PointerButton::Secondary) {
+					let sel =
+					    if input.modifiers.shift {
+						&mut self.selection2
+					    } else {
+						&mut self.selection1
+					    };
 					let new_sel = Some((iy,ix));
-					if self.selection == new_sel {
-					    self.selection = None;
+					if *sel == new_sel {
+					    *sel = None;
 					} else {
-					    self.selection = new_sel;
+					    *sel = new_sel;
 					}
 				    }
 			    }
@@ -215,11 +230,19 @@ impl TileViewer {
 				    }
 			    }
 			}
-			if Some((iy,ix)) == self.selection {
+			if Some((iy,ix)) == self.selection1 {
 			    ui.painter().rect_stroke(
 				Rect::from_points(&[p1,p2]),
 				0.0,
 				Stroke::new(2.0,Color32::GREEN)
+			    );
+			}
+			if Some((iy,ix)) == self.selection2 {
+			    ui.painter().rect_stroke(
+				Rect::from_points(&[p1 + vec2(2.0,2.0),
+						    p2 - vec2(2.0,2.0)]),
+				0.0,
+				Stroke::new(2.0,Color32::RED)
 			    );
 			}
 		    }

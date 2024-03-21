@@ -11,6 +11,7 @@ pub use std::{
 pub use eframe::{
     egui::{
 	Align,
+	Align2,
 	Button,
 	CentralPanel,
 	Color32,
@@ -46,7 +47,8 @@ pub use eframe::{
 	vec2,
 	Vec2,
 	ViewportBuilder,
-	Widget
+	Widget,
+	Window,
     },
     egui_glow,
     glow

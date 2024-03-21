@@ -7,6 +7,7 @@ use crate::{
 
 #[derive(Debug)]
 pub struct Room {
+    pub id:usize,
     pub rows:usize,
     pub cols:usize,
     pub map:A2<Tile>,
@@ -48,7 +49,7 @@ impl Room {
 	}
     }
 
-    pub fn new(name:&str,a:&[&str],rng:&mut MiniRNG)->Self {
+    pub fn new(id:usize,name:&str,a:&[&str],rng:&mut MiniRNG)->Self {
 	// let a : Vec<&str> = descr.split('\n').collect();
 	let rows = a.len();
 	let cols = a[0].len();
@@ -97,7 +98,8 @@ impl Room {
 		map[[i,j]] = t;
 	    }
 	}
-	Self{
+	Self {
+	    id,
 	    rows,
 	    cols,
 	    map,

@@ -103,13 +103,13 @@ impl World {
     }
 
     pub fn add_room(&mut self,id:usize,name:&str,descr:&[&str]) {
-	let room = Room::new(name,descr,&mut self.rng);
+	let room = Room::new(id,name,descr,&mut self.rng);
 	self.rooms.insert(id,Ptr::make(room));
     }
 
     pub fn lock_door_with(&mut self,room:usize,door:usize,obj:Object) {
 	let mut room = self.rooms.get(&room).unwrap().yank_mut();
-	let mut door = room.find_door(door);
+	let door = room.find_door(door);
 	door.locked = true;
 	door.key = Some(obj);
     }
@@ -117,7 +117,7 @@ impl World {
     pub fn connect(&mut self,room1:usize,door1:usize,room2:usize,door2:usize) {
 	{
 	    let mut r1 = self.rooms.get(&room1).unwrap().yank_mut();
-	    let mut d1 = r1.find_door(door1);
+	    let d1 = r1.find_door(door1);
 	    if d1.target != None {
 		panic!("Cannot connect {},{} to {},{} -- origin in use by {:?}",room1,door1,room2,door2,d1.target)
 	    }
@@ -125,7 +125,7 @@ impl World {
 	}
 	{
 	    let mut r2 = self.rooms.get(&room2).unwrap().yank_mut();
-	    let mut d2 = r2.find_door(door2);
+	    let d2 = r2.find_door(door2);
 	    if d2.target != None {
 		panic!("Cannot connect {},{} to {},{} -- destination in use by {:?}",room1,door1,room2,door2,d2.target)
 	    }
