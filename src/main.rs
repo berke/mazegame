@@ -40,7 +40,7 @@ fn main()->Result<(), eframe::Error> {
 			.with_inner_size([1440.0,1024.0]),
 		multisampling:0,
 		centered:true,
-		// renderer:eframe::Renderer::Glow,
+		renderer:eframe::Renderer::Glow,
 		..Default::default()
 	};
 	eframe::run_native(
@@ -96,17 +96,16 @@ impl Leved {
 	fn path_so(&self)->Option<String> {
 		self.path
 			.as_ref()
-			.map(|pb|
-				 pb
-				 .clone()
-				 .into_os_string()
-				 .into_string()
-				 .ok())
-			.flatten()
+			.and_then(|pb|
+					  pb
+					  .clone()
+					  .into_os_string()
+					  .into_string()
+					  .ok())
 	}
 }
 
-const TILE_PALETTE : &'static [(&str,Tile,&str)] = &[
+const TILE_PALETTE : & [(&str,Tile,&str)] = &[
 	(" ",Tile::Empty,"EMPTY"),
 	("%",Tile::Dirt,"DIRT"),
 	("#",Tile::Brick,"BRICK"),
@@ -291,7 +290,7 @@ impl eframe::App for Leved {
 										.set_title("Save world");
 
 									let rfd =
-										if let Some(path) = self.path .as_ref() .map(|pb| pb.parent()) .flatten() {
+										if let Some(path) = self.path .as_ref() .and_then(|pb| pb.parent()) {
 											rfd.set_directory(path)
 										} else {
 											rfd
@@ -383,7 +382,7 @@ impl eframe::App for Leved {
 														  rt
 													  };
 												  if ui.button(rt).clicked() {
-													  self.tv.set_room(Some(Ptr::clone(&room_ptr)));
+													  self.tv.set_room(Some(Ptr::clone(room_ptr)));
 												  }
 											  });
 										  };

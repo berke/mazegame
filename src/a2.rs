@@ -19,8 +19,6 @@ pub struct A2<T> {
 impl<T> A2<T> where T:Copy {
     pub fn new((d0,d1):(isize,isize),out:T)->Self {
 	let m = (d0*d1) as usize;
-	let d0 = d0 as isize;
-	let d1 = d1 as isize;
 	let data = vec![out;m];
 	Self {
 	    d0,

@@ -51,11 +51,7 @@ impl TileViewer {
     }
 
     pub fn room(&self)->Option<Ptr<Room>> {
-	if let Some(p) = &self.room {
-	    Some(Ptr::clone(p))
-	} else {
-	    None
-	}
+	self.room.as_ref().map(Ptr::clone)
     }
 
     pub fn set_tool(&mut self,tool:Tool) {
@@ -97,7 +93,7 @@ impl TileViewer {
 	    let p1 = vec(u+1,v+1);
 	    TileAspect::FromImage(p0,p1)
 	};
-	let fill = |c| TileAspect::Solid(c);
+	let fill = TileAspect::Solid;
 	match tl {
 	    Tile::Fire(p) => tile(4+p.i,4),
 	    Tile::Brick => tile(0,0),

@@ -70,7 +70,7 @@ impl World {
 		let _ = buf.read_line(&mut u)?;
 		let mut ln = line_number.borrow_mut();
 		*ln += 1;
-		Ok(u.trim_end_matches("\n").to_string())
+		Ok(u.trim_end_matches('\n').to_string())
 	    };
 	    let g = |u:&str|->Result<usize> {
 		u.parse::<usize>()
@@ -103,7 +103,7 @@ impl World {
 			let mut descr : Vec<String> = Vec::new();
 			loop {
 			    let line = f()?;
-			    if line.starts_with(" ") {
+			    if line.starts_with(' ') {
 				let (_,rest) = line.split_once(' ').unwrap();
 				descr.push(rest.to_string());
 			    } else if line == "ENDROOM" {
