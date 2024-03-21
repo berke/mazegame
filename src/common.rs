@@ -29,6 +29,7 @@ pub use eframe::{
 	Rect,
 	Response,
 	self,
+	ScrollArea,
 	Sense,
 	Stroke,
 	TextureHandle,
@@ -41,4 +42,9 @@ pub use eframe::{
     },
     egui_glow,
     glow
+};
+
+pub use egui_extras::{
+    Size,
+    StripBuilder,
 };
