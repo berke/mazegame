@@ -22,24 +22,30 @@ use tiles::{
 };
 use object::Object;
 use world::World;
-use tile_viewer::TileViewer;
+use tile_viewer::{
+	TileViewer,
+	Tool
+};
+use tiles::Periodic;
 use ptr::*;
 
 fn main()->Result<(), eframe::Error> {
-    let options = eframe::NativeOptions {
-	viewport:ViewportBuilder::default()
-	    .with_inner_size([500.0,800.0]),
-	multisampling:0,
-	renderer:eframe::Renderer::Glow,
-	..Default::default()
-    };
-    eframe::run_native(
-	"Mazegame Level Editor",
-	options,
-	Box::new(|cc| {
-	    egui_extras::install_image_loaders(&cc.egui_ctx);
-	    Box::new(Leved::new(cc))
-	}),
+	let options = eframe::NativeOptions {
+		viewport:ViewportBuilder::default()
+			.with_maximized(true)
+			.with_inner_size([1440.0,768.0]),
+		multisampling:0,
+		centered:true,
+		// renderer:eframe::Renderer::Glow,
+		..Default::default()
+	};
+	eframe::run_native(
+		"Mazegame Level Editor",
+		options,
+		Box::new(|cc| {
+			egui_extras::install_image_loaders(&cc.egui_ctx);
+			Box::new(Leved::new(cc))
+		}),
     )
 }
 
@@ -65,7 +71,7 @@ impl Leved {
 }
 
 impl eframe::App for Leved {
-	fn update(&mut self,ctx:&Context,_frame:&mut eframe::Frame) {
+	fn update(&mut self,ctx:&Context,frame:&mut eframe::Frame) {
 		CentralPanel::default().show(ctx,|ui| {
 			StripBuilder::new(ui)
 				.size(Size::remainder().at_least(700.0))
@@ -93,6 +99,17 @@ impl eframe::App for Leved {
 									}
 								}
 								ui.add(&mut self.tv);
+								ui.horizontal(|ui| {
+									if ui.button("#").clicked() {
+										self.tv.set_tool(Tool::Place(Tile::Brick));
+									}
+									if ui.button("~").clicked() {
+										self.tv.set_tool(Tool::Place(Tile::Water(Periodic::new(8,8))));
+									}
+									if ui.button("W").clicked() {
+										self.tv.set_tool(Tool::Place(Tile::Window));
+									}
+								});
 							});
 
 						});

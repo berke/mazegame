@@ -19,6 +19,10 @@ impl Room {
     pub fn map(&self)->&A2<Tile> {
 	&self.map
     }
+
+    pub fn map_mut(&mut self)->&mut A2<Tile> {
+	&mut self.map
+    }
     
     pub fn dims(&self)->(usize,usize) {
 	(self.rows,self.cols)

@@ -13,13 +13,19 @@ use crate::{
     room::Room
 };
 
+#[derive(Copy,Clone)]
+pub enum Tool {
+    Place(Tile)
+}
+
 pub struct TileViewer {
     img:Option<load::TexturePoll>,
     ny:isize,
     nx:isize,
     tile_size:Vec2,
     room:Option<Ptr<Room>>,
-    rainbow_index:usize
+    rainbow_index:usize,
+    tool:Tool
 }
 
 #[derive(Copy,Clone)]
@@ -42,13 +48,18 @@ impl TileViewer {
 	self.room = room;
     }
 
+    pub fn set_tool(&mut self,tool:Tool) {
+	self.tool = tool;
+    }
+
     pub fn new()->Self {
 	let img = None;
 	let tile_size = vec2(32.0,32.0);
 	let map = A2::new((16,16),Tile::Empty);
-	let ny = 24;
-	let nx = 32;
-	Self { img,tile_size,rainbow_index:0,room:None,ny,nx }
+	let ny = 32;
+	let nx = 40;
+	Self { img,tile_size,rainbow_index:0,room:None,ny,nx,
+	       tool:Tool::Place(Tile::Empty) }
     }
 
     fn find_tile(&self,tl:Tile)->TileAspect {
@@ -100,7 +111,8 @@ impl TileViewer {
 	let (ny,nx) = (self.ny,self.nx); // map.dims();
 	let desired_size = vec2(nx as f32,ny as f32)*self.tile_size;
 	let (rect,mut response) = ui.allocate_exact_size(desired_size,
-							 Sense::click());
+							 Sense::click_and_drag());
+
 	if ui.is_rect_visible(rect) {
 	    ui.painter().rect(
 		rect,
@@ -112,7 +124,7 @@ impl TileViewer {
 	    if let Some(room_ptr) = &self.room {
 		let mut room = room_ptr.yank_mut();
 		ui.text_edit_singleline(&mut room.name);
-		let map = room.map();
+		let mut map = room.map_mut();
 		let (ny,nx) = map.dims();
 
 		// let tpoll =
@@ -120,12 +132,25 @@ impl TileViewer {
 		    include_image!("../gfx/tiles.png")
 			.load(
 			    ui.ctx(),
-			    TextureOptions::NEAREST,
-			    load::SizeHint::Size(32,32))
+			    TextureOptions::NEAREST_MIRRORED_REPEAT,
+			    load::SizeHint::Size(320,320))
 			.expect("Can't load image")
 		});
 
 		let p0 = rect.left_top();
+
+		if response.is_pointer_button_down_on() {
+		    if let Some(p) = response.interact_pointer_pos() {
+			let r = (p - p0) / self.tile_size;
+			let iy = r[1].floor() as isize;
+			let ix = r[0].floor() as isize;
+			if 0 <= iy && iy < ny && 0 <= ix && ix < nx {
+			    match self.tool {
+				Tool::Place(tile) => map[[iy,ix]] = tile
+			    }
+			}
+		    }
+		}
 
 		for iy in 0..ny {
 		    for ix in 0..nx {
@@ -143,8 +168,9 @@ impl TileViewer {
 			    },
 			    TileAspect::FromImage(q0,q1) => {
 				if let Some(TexturePoll::Ready { texture }) = self.img {
-				    let u0 = q0/texture.size;
-				    let u1 = q1/texture.size;
+				    let ts = texture.size;
+				    let u0 = q0/ts;
+				    let u1 = q1/ts;
 				    let uv = Rect::from_points(&[u0.to_pos2(),u1.to_pos2()]);
 				    ui.painter().image(
 					texture.id,
