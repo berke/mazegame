@@ -37,6 +37,7 @@ pub use eframe::{
 	Response,
 	self,
 	ScrollArea,
+	scroll_area::ScrollBarVisibility,
 	Sense,
 	Stroke,
 	TextureHandle,

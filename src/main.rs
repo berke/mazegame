@@ -131,7 +131,12 @@ impl eframe::App for Leved {
 									});
 							});
 							
+							ui.separator();
+
 							ScrollArea::both()
+								.scroll_bar_visibility(ScrollBarVisibility::AlwaysVisible)
+								.max_width(800.0)
+								.max_height(600.0)
 								.show(ui,|ui| {
 									ui.add(&mut self.tv);
 								});

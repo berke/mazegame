@@ -69,7 +69,7 @@ impl TileViewer {
 	let img = None;
 	let tile_size = vec2(32.0,32.0);
 	let map = A2::new((16,16),Tile::Empty);
-	let ny = 24;
+	let ny = 48;
 	let nx = 48;
 	Self { img,tile_size,
 	       rainbow_index:0,
