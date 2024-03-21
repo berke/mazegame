@@ -23,6 +23,7 @@ use tiles::{
 use object::Object;
 use world::World;
 use tile_viewer::TileViewer;
+use ptr::Ptr;
 
 fn main()->Result<(), eframe::Error> {
     let options = eframe::NativeOptions {
@@ -78,7 +79,14 @@ impl eframe::App for Leved {
 			 .unwrap_or_else(|_| "WTF".to_string()));
 		if let Some(path) = patho {
 		    self.world.clear();
-		    let _ = self.world.load(path);
+		    match self.world.load(path) {
+			Err(e) => eprintln!("Error: {}",e),
+			Ok(()) => {
+			    if let Some(room) = self.world.rooms.get(&self.world.start_room) {
+				self.tv.set_room(Some(Ptr::clone(room)));
+			    }
+			}
+		    }
 		}
 		// self.patho = patho;
 	    }

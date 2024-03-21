@@ -38,6 +38,10 @@ impl TileViewer {
 	Color32::from_rgb(255,  0,255),
     ];
 
+    pub fn set_room(&mut self,room:Option<Ptr<Room>>) {
+	self.room = room;
+    }
+
     pub fn new()->Self {
 	let img = None;
 	let tile_size = vec2(32.0,32.0);
@@ -107,7 +111,11 @@ impl TileViewer {
 		Stroke::NONE
 	    );
 
-	    if let Some(room) = &self.room {
+	    if let Some(room_ptr) = &self.room {
+		let room = room_ptr.yank();
+		let map = room.map();
+		let (ny,nx) = map.dims();
+
 		// let tpoll =
 		self.img.get_or_insert_with(|| {
 		    include_image!("../gfx/tiles.png")
@@ -125,7 +133,7 @@ impl TileViewer {
 			let p1 = p0 + vec2(ix as f32,iy as f32)*self.tile_size;
 			let p2 = p1 + self.tile_size;
 			let rect = Rect::from_points(&[p1,p2]);
-			match self.find_tile(Tile::Empty) { // self.map[[iy,ix]]) {
+			match self.find_tile(map[[iy,ix]]) {
 			    TileAspect::Solid(color) => {
 				painter.rect(
 				    Rect::from_points(&[p1,p2]),

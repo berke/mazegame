@@ -115,18 +115,22 @@ impl World {
     }
 
     pub fn connect(&mut self,room1:usize,door1:usize,room2:usize,door2:usize) {
-	let mut r1 = self.rooms.get(&room1).unwrap().yank_mut();
-	let mut d1 = r1.find_door(door1);
-	if d1.target != None {
-	    panic!("Cannot connect {},{} to {},{} -- origin in use by {:?}",room1,door1,room2,door2,d1.target)
+	{
+	    let mut r1 = self.rooms.get(&room1).unwrap().yank_mut();
+	    let mut d1 = r1.find_door(door1);
+	    if d1.target != None {
+		panic!("Cannot connect {},{} to {},{} -- origin in use by {:?}",room1,door1,room2,door2,d1.target)
+	    }
+	    d1.target = Some(Target{ room:room2, door:door2 });
 	}
-	d1.target = Some(Target{ room:room2, door:door2 });
-	let mut r2 = self.rooms.get(&room2).unwrap().yank_mut();
-	let mut d2 = r2.find_door(door2);
-	if d2.target != None {
-	    panic!("Cannot connect {},{} to {},{} -- destination in use by {:?}",room1,door1,room2,door2,d2.target)
+	{
+	    let mut r2 = self.rooms.get(&room2).unwrap().yank_mut();
+	    let mut d2 = r2.find_door(door2);
+	    if d2.target != None {
+		panic!("Cannot connect {},{} to {},{} -- destination in use by {:?}",room1,door1,room2,door2,d2.target)
+	    }
+	    d2.target = Some(Target{ room:room1, door:door1 });
 	}
-	d2.target = Some(Target{ room:room1, door:door1 });
     }
 }
 

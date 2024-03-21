@@ -16,6 +16,10 @@ pub struct Room {
 }
 
 impl Room {
+    pub fn map(&self)->&A2<Tile> {
+	&self.map
+    }
+    
     pub fn dims(&self)->(usize,usize) {
 	(self.rows,self.cols)
     }
