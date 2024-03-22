@@ -11,6 +11,7 @@ mod a2;
 mod mini_rng;
 mod tile_viewer;
 mod ptr;
+mod refresher;
 
 use common::*;
 use a2::A2;
@@ -111,7 +112,7 @@ impl Leved {
 		      .ok())
     }
 
-    fn connect(&mut self,ui:&mut Ui) {
+    fn connect(&mut self,_ui:&mut Ui) {
 	if let Some((ta1,ta2)) = self.tv.selection1().zip(self.tv.selection2()) {
 	    if let Some(tt) = self.world.get_tile(&ta1).zip(self.world.get_tile(&ta2)) {
 		match tt {

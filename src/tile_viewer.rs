@@ -14,6 +14,7 @@ use crate::{
 	TileAddress
     },
     ptr::*,
+    refresher::Refresher,
     room::Room
 };
 
@@ -36,7 +37,8 @@ pub struct TileViewer {
     info:String,
     goto:Option<usize>,
     hover:Option<(usize,usize)>,
-    last_edit:Option<(usize,usize)>
+    last_edit:Option<(usize,usize)>,
+    refresher:Refresher
 }
 
 #[derive(Copy,Clone)]
@@ -90,7 +92,8 @@ impl TileViewer {
 	       info:String::new(),
 	       goto:None,
 	       hover:None,
-	       last_edit:None
+	       last_edit:None,
+	       refresher:Refresher::new(0.05)
 	}
     }
 
@@ -204,6 +207,10 @@ impl TileViewer {
 
 	    if let Some(room_ptr) = self.room.as_ref().map(|p| p.refer()) {
 		let mut room = room_ptr.yank_mut();
+
+		if self.refresher.tick(ui) {
+		    room.next();
+		}
 
 		let room_id = room.id;
 		// let map = room.map();
