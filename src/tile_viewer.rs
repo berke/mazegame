@@ -4,25 +4,23 @@ use crate::{
     tiles::{
 	Corner,
 	Door,
+	Target,
 	Tile,
 	Random
     },
     object::Object,
-    world::World,
+    world::{
+	World,
+	TileAddress
+    },
     ptr::*,
     room::Room
 };
 
 #[derive(Copy,Clone,PartialEq)]
 pub enum Tool {
+    Nothing,
     Place(Tile)
-}
-
-#[derive(Copy,Clone,PartialEq)]
-pub struct TileAddress {
-    pub room_id:usize,
-    pub iy:isize,
-    pub ix:isize
 }
 
 pub struct TileViewer {
@@ -34,7 +32,9 @@ pub struct TileViewer {
     rainbow_index:usize,
     selection1:Option<TileAddress>,
     selection2:Option<TileAddress>,
-    tool:Tool
+    tool:Tool,
+    info:String,
+    goto:Option<usize>
 }
 
 #[derive(Copy,Clone)]
@@ -58,7 +58,7 @@ impl TileViewer {
     }
 
     pub fn room(&self)->Option<Ptr<Room>> {
-	self.room.as_ref().map(Ptr::clone)
+	self.room.as_ref().map(Ptr::refer)
     }
 
     pub fn set_tool(&mut self,tool:Tool) {
@@ -81,7 +81,10 @@ impl TileViewer {
 	       nx,
 	       selection1:None,
 	       selection2:None,
-	       tool:Tool::Place(Tile::Empty) }
+	       tool:Tool::Nothing,
+	       info:String::new(),
+	       goto:None
+	}
     }
 
     pub fn selection1(&self)->Option<TileAddress> {
@@ -92,6 +95,15 @@ impl TileViewer {
 	self.selection2
     }
 
+    fn tile_rect(&self,p0:Pos2,iy:isize,ix:isize,enlarge:f32)->Rect {
+	let p1 = p0 + vec2(ix as f32,iy as f32)*self.tile_size;
+	let p2 = p1 + self.tile_size;
+
+	Rect::from_points(&[
+	    p1 - enlarge*vec2(1.0,1.0),
+	    p2 + enlarge*vec2(1.0,1.0)])
+    }
+    
     fn find_tile(&self,tl:Tile)->TileAspect {
 	let (tw,th) = (16,16);
 	let vec = |u,v| vec2((v*tw) as f32,(u*th) as f32);
@@ -123,6 +135,7 @@ impl TileViewer {
 		Object::Banana => tile(1,7),
 		Object::Carrot => tile(1,8)
 	    },
+	    Tile::Door(Door{ target:None, .. }) => tile(2,3),
 	    Tile::Door(Door{ key:None, .. }) => tile(0,2),
 	    Tile::Door(Door{ key:Some(_), locked:true, ..}) => tile(1,3),
 	    Tile::Door(Door{ key:Some(_), locked:false, ..}) => tile(1,4),
@@ -137,6 +150,35 @@ impl TileViewer {
 	}
     }
 
+    fn which_tile(&self,p0:Pos2,p:Pos2)->Option<(isize,isize)> {
+	let r = (p - p0) / self.tile_size;
+	let iy = r[1].floor() as isize;
+	let ix = r[0].floor() as isize;
+	if 0 <= iy && iy < self.ny && 0 <= ix && ix < self.nx {
+	    Some((iy,ix))
+	} else {
+	    None
+	}
+    }
+    
+    pub fn ui(&mut self,ui:&mut Ui) {
+	ui.label(&self.info);
+	ui.separator();
+	ScrollArea::both()
+	    .scroll_bar_visibility(ScrollBarVisibility::AlwaysVisible)
+	    .max_height(600.0)
+	    .show(ui,|ui| ui.add(self)); // self.ui(ui));
+    }
+
+    fn info(&mut self,u:&str) {
+	self.info.clear();
+	self.info.push_str(u);
+    }
+
+    pub fn take_goto(&mut self)->Option<usize> {
+	self.goto.take()
+    }
+    
     pub fn do_ui(&mut self,ui:&mut Ui)->Response {
 	let (ny,nx) = (self.ny,self.nx);
 	let desired_size = vec2(nx as f32,ny as f32)*self.tile_size;
@@ -144,6 +186,7 @@ impl TileViewer {
 	    ui.allocate_exact_size(desired_size,
 				   Sense::click_and_drag());
 
+	let mut hover = None;
 	if ui.is_rect_visible(rect) {
 	    ui.painter().rect(
 		rect,
@@ -152,9 +195,9 @@ impl TileViewer {
 		Stroke::NONE
 	    );
 
-	    if let Some(room_ptr) = &self.room {
+	    if let Some(room_ptr) = self.room.as_ref().map(|p| p.refer()) {
 		let mut room = room_ptr.yank_mut();
-		// ui.text_edit_singleline(&mut room.name);
+
 		let room_id = room.id;
 		let map = room.map_mut();
 		let (ny,nx) = map.dims();
@@ -170,18 +213,32 @@ impl TileViewer {
 
 		let p0 = rect.left_top();
 
+		if let Some(p) = response.hover_pos() {
+		    hover = self.which_tile(p0,p);
+		}
+
+		if let Some((iy,ix)) = hover {
+		    let mut info = String::new();
+		    write!(info,"({:02},{:02}) {}",iy,ix,map[[iy,ix]]).unwrap();
+		    self.info = info;
+		}
+
 		if response.is_pointer_button_down_on() {
-		    ui.input(|input| {
-			if let Some(p) = response.interact_pointer_pos() {
-			    let r = (p - p0) / self.tile_size;
-			    let iy = r[1].floor() as isize;
-			    let ix = r[0].floor() as isize;
-			    if 0 <= iy && iy < ny && 0 <= ix && ix < nx {
+		    if let Some(p) = response.interact_pointer_pos() {
+			if let Some((iy,ix)) = self.which_tile(p0,p) {
+			    ui.input(|input| {
 				if input.pointer
 				    .button_down(PointerButton::Primary) {
 					match self.tool {
+					    Tool::Nothing => {
+						if let Tile::Door(
+						    Door { target:Some(Target { room, .. }),
+							   .. }) = map[[iy,ix]] {
+						    self.goto = Some(room);
+						}
+					    },
 					    Tool::Place(tile) =>
-						map[[iy,ix]] = tile
+						map[[iy,ix]] = tile,
 					}
 				    } else if input.pointer
 				    .button_pressed(PointerButton::Secondary) {
@@ -197,11 +254,13 @@ impl TileViewer {
 					} else {
 					    *sel = new_sel;
 					}
+				    } else {
+					hover = Some((iy,ix));
 				    }
-			    }
+			    });
 			}
-		    })
-		};
+		    }
+		}
 
 		for iy in 0..ny {
 		    for ix in 0..nx {
@@ -234,23 +293,37 @@ impl TileViewer {
 				    }
 			    }
 			}
-			let here = TileAddress { iy,ix,room_id };
-			if Some(here) == self.selection1 {
-			    ui.painter().rect_stroke(
-				Rect::from_points(&[p1,p2]),
-				0.0,
-				Stroke::new(2.0,Color32::GREEN)
-			    );
-			}
-			if Some(here) == self.selection2 {
-			    ui.painter().rect_stroke(
-				Rect::from_points(&[p1 + vec2(2.0,2.0),
-						    p2 - vec2(2.0,2.0)]),
-				0.0,
-				Stroke::new(2.0,Color32::RED)
-			    );
-			}
 		    }
+		}
+
+		match self.selection1 {
+		    Some(TileAddress { iy,ix,room_id:id }) if id == room_id => {
+			ui.painter().rect_stroke(
+			    self.tile_rect(p0,iy,ix,1.0),
+			    0.0,
+			    Stroke::new(2.0,Color32::GREEN));
+		    },
+		    _ => ()
+		}
+
+		match self.selection2 {
+		    Some(TileAddress { iy,ix,room_id:id }) if id == room_id => {
+			ui.painter().rect_stroke(
+			    self.tile_rect(p0,iy,ix,2.0),
+			    0.0,
+			    Stroke::new(2.0,Color32::RED));
+		    },
+		    _ => ()
+		}
+
+		match hover {
+		    Some((iy,ix)) => {
+			ui.painter().rect_stroke(
+			    self.tile_rect(p0,iy,ix,3.0),
+			    0.0,
+			    Stroke::new(2.0,Color32::WHITE));
+		    },
+		    _ => ()
 		}
 	    }
 	}

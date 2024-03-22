@@ -71,6 +71,13 @@ struct Leved {
     door_editor:Option<DoorEditor>
 }
 
+fn using<T,F:FnMut(T)>(x:Option<T>,mut f:F) {
+    match x {
+	None => (),
+	Some(y) => f(y)
+    }
+}
+
 impl Leved {
     fn new(_cc:&eframe::CreationContext<'_>)->Self {
 	let tv = TileViewer::new();
@@ -105,65 +112,57 @@ impl Leved {
     }
 
     fn connect(&mut self,ui:&mut Ui) {
-	// self.tv.room().map_or((),|room_ptr| {
-	//     let room = room_ptr.yank_mut();
-	//     self.tv.selection1().map_or((),|(iy1,ix1)| {
-	// 	self.tv.selection2().map_or((),|(iy2,ix2)| {
-	// 	});
-	//     })
-	// });
+	if let Some((ta1,ta2)) = self.tv.selection1().zip(self.tv.selection2()) {
+	    if let Some(tt) = self.world.get_tile(&ta1).zip(self.world.get_tile(&ta2)) {
+		match tt {
+		    (Tile::Door(mut d1 @ Door { target:None, .. }),
+		     Tile::Door(mut d2 @ Door { target:None, .. })) => {
+			d1.target = Some(Target { room:ta2.room_id,
+						  door:d2.id });
+			d2.target = Some(Target { room:ta1.room_id,
+						  door:d1.id });
+			self.world.set_tile(&ta1,Tile::Door(d1));
+			self.world.set_tile(&ta2,Tile::Door(d2));
+			self.message("Doors connected");
+		    },
+		    _ => {
+			self.message("You need to select two unconnected doors!")
+		    }
+		}
+	    }
+	}
     }
-	    
-    // 	    if let Some((iy,ix)) =
-    // 		let map = room.map();
-    // 		if let Tile::Door(door) = map[[iy,ix]] {
-    // 		    self.door_editor =
-    // 			Some(DoorEditor {
-    // 			    room:room.id,
-    // 			    indices:(iy,ix),
-    // 			    door
-    // 			});
-    // 		    self.door_props_open = true;
-    // 		} else {
-    // 		    self.message("This is not a door!");
-    // 		}
-    // 	    } else {
-    // 		self.message("You have to select a tile by right-clicking");
-    // 	    }
-    // 	} else {
-    // 	    self.message("There is no room");
-    // 	}
-    // }
 }
 
-const TILE_PALETTE : & [(&str,Tile,&str)] = &[
-    (" ",Tile::Empty,"EMPTY"),
-    ("%",Tile::Dirt,"DIRT"),
-    ("#",Tile::Brick,"BRICK"),
-    ("~",Tile::Water(Periodic { i:0,m:8,j:0,n:8 }),"WATER"),
-    (".",Tile::Grass,"GRASS"),
-    ("@",Tile::Vortex,"VORTEX"),
-    ("*",Tile::PyramidStone,"PYRAMID"),
-    ("W",Tile::Window,"WINDOW"),
-    ("F",Tile::Fire(Periodic { i:0,m:3,j:0,n:2 }),"FIRE"),
-    ("q",Tile::MetalRamp(Corner::NW),"METAL NW"),
-    ("w",Tile::MetalRamp(Corner::NE),"METAL NE"),
-    ("a",Tile::MetalRamp(Corner::SW),"METAL SW"),
-    ("s",Tile::MetalRamp(Corner::SE),"METAL SE"),
-    ("m",Tile::Metal,"METAL"),
-    ("A",Tile::Alien,"ALIEN"),
-    ("x",Tile::MetalFoot,"METAL FOOT"),
-    ("^",Tile::Sky(Random { i:1 }),"SKY"),
-    ("D",Tile::Door(Door { id:0,target:None,key:None,locked:false }),"DOOR"),
-    ("K",Tile::Object(Object::Key),"KEY"),
-    ("T",Tile::Object(Object::ToyCar),"TOY CAR"),
-    ("I",Tile::Object(Object::IceCream),"ICECREAM"),
-    ("C",Tile::Object(Object::Coin),"COIN"),
-    ("S",Tile::Object(Object::SquaresAndTriangles),"SQ&TR"),
-    ("c",Tile::Object(Object::Carrot),"CARROT"),
-    ("t",Tile::Object(Object::Tomato),"TOMATO"),
-    ("e",Tile::Object(Object::Eggplant),"EGGPLANT"),
-    ("b",Tile::Object(Object::Banana),"BANANA"),
+const TILE_PALETTE : & [(&str,Tool,&str)] = &[
+    ("",Tool::Nothing,"DO NOTHING"),
+    (" ",Tool::Place(Tile::Empty),"EMPTY"),
+    ("%",Tool::Place(Tile::Dirt),"DIRT"),
+    ("#",Tool::Place(Tile::Brick),"BRICK"),
+    ("~",Tool::Place(Tile::Water(Periodic { i:0,m:8,j:0,n:8 })),"WATER"),
+    (".",Tool::Place(Tile::Grass),"GRASS"),
+    ("@",Tool::Place(Tile::Vortex),"VORTEX"),
+    ("*",Tool::Place(Tile::PyramidStone),"PYRAMID"),
+    ("W",Tool::Place(Tile::Window),"WINDOW"),
+    ("F",Tool::Place(Tile::Fire(Periodic { i:0,m:3,j:0,n:2 })),"FIRE"),
+    ("q",Tool::Place(Tile::MetalRamp(Corner::NW)),"METAL NW"),
+    ("w",Tool::Place(Tile::MetalRamp(Corner::NE)),"METAL NE"),
+    ("a",Tool::Place(Tile::MetalRamp(Corner::SW)),"METAL SW"),
+    ("s",Tool::Place(Tile::MetalRamp(Corner::SE)),"METAL SE"),
+    ("m",Tool::Place(Tile::Metal),"METAL"),
+    ("A",Tool::Place(Tile::Alien),"ALIEN"),
+    ("x",Tool::Place(Tile::MetalFoot),"METAL FOOT"),
+    ("^",Tool::Place(Tile::Sky(Random { i:1 })),"SKY"),
+    ("D",Tool::Place(Tile::Door(Door { id:0,target:None,key:None,locked:false })),"DOOR"),
+    ("K",Tool::Place(Tile::Object(Object::Key)),"KEY"),
+    ("T",Tool::Place(Tile::Object(Object::ToyCar)),"TOY CAR"),
+    ("I",Tool::Place(Tile::Object(Object::IceCream)),"ICECREAM"),
+    ("C",Tool::Place(Tile::Object(Object::Coin)),"COIN"),
+    ("S",Tool::Place(Tile::Object(Object::SquaresAndTriangles)),"SQ&TR"),
+    ("c",Tool::Place(Tile::Object(Object::Carrot)),"CARROT"),
+    ("t",Tool::Place(Tile::Object(Object::Tomato)),"TOMATO"),
+    ("e",Tool::Place(Tile::Object(Object::Eggplant)),"EGGPLANT"),
+    ("b",Tool::Place(Tile::Object(Object::Banana)),"BANANA"),
 ];
 
 impl eframe::App for Leved {
@@ -255,13 +254,17 @@ impl eframe::App for Leved {
 			    
 			    ui.separator();
 
-			    ScrollArea::both()
-				.scroll_bar_visibility(ScrollBarVisibility::AlwaysVisible)
-			    // .max_width(800.0)
-				.max_height(600.0)
-				.show(ui,|ui| {
-				    ui.add(&mut self.tv);
-				});
+			    self.tv.ui(ui);
+			    if let Some(room_id) = self.tv.take_goto() {
+				self.goto_room(room_id);
+			    }
+			    // ScrollArea::both()
+			    // 	.scroll_bar_visibility(ScrollBarVisibility::AlwaysVisible)
+			    // // .max_width(800.0)
+			    // 	.max_height(600.0)
+			    // 	.show(ui,|ui| {
+			    // 	    ui.add(&mut self.tv);
+			    // 	});
 
 			    let tm = self.tv.get_tool_mut();
 
@@ -278,8 +281,7 @@ impl eframe::App for Leved {
 			    for event in &events {
 				match event {
 				    Event::Text(u) => {
-					for &(key,tile,_) in TILE_PALETTE {
-					    let tool = Tool::Place(tile);
+					for &(key,tool,_) in TILE_PALETTE {
 					    if key == u {
 						*tm = tool;
 						break;
@@ -300,8 +302,7 @@ impl eframe::App for Leved {
 				    ui,
 				    |ui| {
 					let mut j = 0;
-					for &(key,tile,name) in TILE_PALETTE {
-					    let tool = Tool::Place(tile);
+					for &(key,tool,name) in TILE_PALETTE {
 					    ui.selectable_value(
 						tm,
 						tool,
@@ -368,9 +369,7 @@ impl eframe::App for Leved {
 					    Ok(()) => {
 						self.message(&format!("Loaded from {:?}",path));
 						self.path = Some(path);
-						if let Some(room) = self.world.rooms.get(&self.world.start_room) {
-						    self.tv.set_room(Some(Ptr::clone(room)));
-						}
+						self.goto_room(self.world.start_room);
 					    }
 					}
 				    }
@@ -384,44 +383,76 @@ impl eframe::App for Leved {
 			    .show(ui,
 				  |ui| {
 				      ui.vertical(|ui| {
-					  ui.horizontal(|ui| {
-					      ui.label("Rooms");
-					      ui.with_layout(
-						  Layout::right_to_left(Align::Center),
-						  |ui| {
-						      ui.horizontal(|ui| {
-							  if ui.button("ADD").clicked() {
-							      let id = self.world.last_id().unwrap_or(0) + 1;
-							      let room = Room::empty(id,48,48);
-							      self.world.insert_room(room);
-							  }
-						      });
-						  });
-					  });
-					  ui.separator();
-					  let active_id = self.tv.room().map(|p| p.yank().id);
-					  for (&iroom,room_ptr) in self.world.rooms.iter() {
-					      let room = room_ptr.yank();
-					      ui.horizontal(|ui| {
-						  ui.monospace(format!("{:8}",iroom));
-						  ui.separator();
-						  let active = Some(iroom) == active_id;
-						  let rt = RichText::new(&room.name);
-						  let rt =
-						      if active {
-							  rt.strong()
-						      } else {
-							  rt
-						      };
-						  if ui.button(rt).clicked() {
-						      self.tv.set_room(Some(Ptr::clone(room_ptr)));
-						  }
-					      });
-					  };
+					  self.room_list(ui);
 				      });
 				  });
 		    });
 		});
 	});
+    }
+}
+
+trait ApplyIf {
+    fn apply_if<F:FnMut(Self)->Self>(self,x:bool,mut f:F)->Self where Self:Sized {
+	if x {
+	    f(self)
+	} else {
+	    self
+	}
+    }
+}
+
+impl ApplyIf for RichText { }
+
+impl Leved {
+    fn room_list(&mut self,ui:&mut Ui) {
+	ui.horizontal(|ui| {
+	    ui.label("Rooms");
+	    ui.with_layout(
+		Layout::right_to_left(Align::Center),
+		|ui| {
+		    ui.horizontal(|ui| {
+			if ui.button("ADD").clicked() {
+			    let id = self.world.last_id().unwrap_or(0) + 1;
+			    let room = Room::empty(id,48,48);
+			    self.world.insert_room(room);
+			}
+		    });
+		});
+	});
+	ui.separator();
+	let active_id = self.tv.room().map(|p| p.yank().id);
+	for (&iroom,room_ptr) in self.world.rooms.iter() {
+	    let room = room_ptr.yank();
+	    ui.horizontal(|ui| {
+		ui.monospace(format!("{:8}",iroom));
+		ui.separator();
+		let active = Some(iroom) == active_id;
+		let has_sels : Vec<_> = [self.tv.selection1(),self.tv.selection2()]
+		    .iter()
+		    .map(|selo|
+			 selo
+			 .map(|sel| sel.room_id == iroom)
+			 .unwrap_or(false))
+		    .collect();
+		ui.monospace(
+		    RichText::new(" ")
+			.apply_if(has_sels[0],|t| t.background_color(Color32::GREEN)));
+		ui.monospace(
+		    RichText::new(" ")
+			.apply_if(has_sels[1],|t| t.background_color(Color32::RED)));
+		let rt = RichText::new(&room.name)
+		    .apply_if(active,|t| t.strong());
+		if ui.button(rt).clicked() {
+		    self.tv.set_room(Some(Ptr::clone(room_ptr)));
+		}
+	    });
+	};
+    }
+
+    fn goto_room(&mut self,room_id:usize) {
+	if let Some(room) = self.world.rooms.get(&room_id) {
+	    self.tv.set_room(Some(Ptr::clone(room)));
+	}
     }
 }

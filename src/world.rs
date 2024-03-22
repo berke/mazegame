@@ -40,6 +40,13 @@ pub struct World {
     pub rng:MiniRNG
 }
 
+#[derive(Copy,Clone,PartialEq)]
+pub struct TileAddress {
+    pub room_id:usize,
+    pub iy:isize,
+    pub ix:isize
+}
+
 use std::cell::RefCell;
 
 impl World {
@@ -153,7 +160,7 @@ impl World {
 	{
 	    let mut r1 = self.rooms.get(&room1).unwrap().yank_mut();
 	    let d1 = r1.find_door(door1);
-	    if d1.target != None {
+	    if d1.target.is_some() {
 		panic!("Cannot connect {},{} to {},{} -- origin in use by {:?}",room1,door1,room2,door2,d1.target)
 	    }
 	    d1.target = Some(Target{ room:room2, door:door2 });
@@ -161,11 +168,27 @@ impl World {
 	{
 	    let mut r2 = self.rooms.get(&room2).unwrap().yank_mut();
 	    let d2 = r2.find_door(door2);
-	    if d2.target != None {
+	    if d2.target.is_some() {
 		panic!("Cannot connect {},{} to {},{} -- destination in use by {:?}",room1,door1,room2,door2,d2.target)
 	    }
 	    d2.target = Some(Target{ room:room1, door:door1 });
 	}
+    }
+
+    pub fn get_tile(&self,ta:&TileAddress)->Option<Tile> {
+	self.rooms.get(&ta.room_id)
+	    .map(|room_ptr| {
+		let room = room_ptr.yank();
+		room.map[[ta.iy,ta.ix]]
+	    })
+    }
+
+    pub fn set_tile(&self,ta:&TileAddress,tile:Tile) {
+	self.rooms.get(&ta.room_id)
+	    .map_or((),|room_ptr| {
+		let mut room = room_ptr.yank_mut();
+		room.map[[ta.iy,ta.ix]] = tile;
+	    })
     }
 }
 

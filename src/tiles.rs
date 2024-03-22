@@ -1,3 +1,8 @@
+use std::fmt::{
+    Display,
+    Formatter
+};
+
 use serde::{
     Deserialize,
     Serialize
@@ -92,5 +97,50 @@ impl Tile {
 	    Tile::Fire(p) | Tile::Water(p) => p.next(),
 	    _ => ()
 	}
+    }
+}
+
+impl Display for Tile {
+    fn fmt(&self,f:&mut Formatter<'_>)->std::result::Result<(),std::fmt::Error> {
+	match self {
+	    Tile::Empty => write!(f,"Nothing")?,
+	    Tile::Brick => write!(f,"A brick")?,
+	    Tile::Rainbow => write!(f,"A rainbow")?,
+	    Tile::Object(o) => write!(f,"{}",o.name())?,
+	    Tile::Vortex => write!(f,"A vortex")?,
+	    Tile::Grass => write!(f,"Grass")?,
+	    Tile::Dirt => write!(f,"Dirt")?,
+	    Tile::PyramidStone => write!(f,"A Pyramid stone")?,
+	    Tile::Window => write!(f,"A window")?,
+	    Tile::Water(_) => write!(f,"Water")?,
+	    Tile::Fire(_) => write!(f,"Fire")?,
+	    Tile::Door(d) => {
+		write!(f,"Door number {}.",d.id)?;
+		match d.key {
+		    None => (),
+		    Some(k) => {
+			if d.locked {
+			    write!(f,"  It's locked, needs {} to open.",
+				   k.name())?;
+			} else {
+			    write!(f,"  It was unlocked with {}.",
+				   k.name())?;
+			}
+		    }
+		}
+		match d.target {
+		    None => write!(f,"  This door goes nowhere!")?,
+		    Some(Target { room,door }) =>
+			write!(f,"  Goes to door {} of room {}",
+			       door,room)?
+		}
+	    },
+	    Tile::Metal => write!(f,"Metal")?,
+	    Tile::Alien => write!(f,"An alien")?,
+	    Tile::MetalRamp(_) => write!(f,"A metal ramp")?,
+	    Tile::MetalFoot => write!(f,"A metal foot")?,
+	    Tile::Sky(_) => write!(f,"The sky")?,
+	}
+	Ok(())
     }
 }
