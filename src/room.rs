@@ -74,6 +74,10 @@ impl Room {
 	}
     }
 
+    pub fn locate_door(&mut self,door:usize)->Option<(usize,usize)> {
+	self.doors.get(&door).copied()
+    }
+    
     pub fn find_door(&mut self,door:usize)->&mut Door {
 	match self.doors.get(&door) {
 	    None => panic!("Door not defined"),

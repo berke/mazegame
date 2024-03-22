@@ -104,7 +104,8 @@ pub struct TileViewer {
     last_edit:Option<(usize,usize)>,
     refresher:Refresher,
     rng:MiniRNG,
-    undos:BTreeMap<usize,Undo>
+    undos:BTreeMap<usize,Undo>,
+    target_tile:Option<(usize,usize)>,
 }
 
 #[derive(Copy,Clone)]
@@ -161,7 +162,8 @@ impl TileViewer {
 	       last_edit:None,
 	       refresher:Refresher::new(0.05),
 	       rng:MiniRNG::new(1),
-	       undos:BTreeMap::new()
+	       undos:BTreeMap::new(),
+	       target_tile:None
 	}
     }
 
@@ -338,9 +340,19 @@ impl TileViewer {
 		if let Some((iy,ix)) = hover {
 		    if hover != self.hover {
 			let mut info = String::new();
-			write!(info,"({:02},{:02}) {}",iy,ix,room.map()[[iy,ix]]).unwrap();
+			let tile = room.map()[[iy,ix]];
+			write!(info,"({:02},{:02}) {}",iy,ix,tile).unwrap();
 			self.info = info;
 			self.hover = hover;
+			self.target_tile = None;
+			match tile {
+			    Tile::Door(Door { target:Some(Target { room:id,door }), .. }) => {
+				if room_id == id {
+				    self.target_tile = room.locate_door(door);
+				}
+			    },
+			    _ => ()
+			}
 		    }
 		}
 
@@ -482,6 +494,16 @@ impl TileViewer {
 			    self.tile_rect(p0,iy,ix,3.0),
 			    0.0,
 			    Stroke::new(2.0,col));
+		    },
+		    _ => ()
+		}
+
+		match self.target_tile {
+		    Some((iy,ix)) => {
+			ui.painter().rect_stroke(
+			    self.tile_rect(p0,iy,ix,4.0),
+			    0.0,
+			    Stroke::new(2.0,Color32::from_rgb(200,200,200)));
 		    },
 		    _ => ()
 		}
