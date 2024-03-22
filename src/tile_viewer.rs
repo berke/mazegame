@@ -1,3 +1,8 @@
+use std::collections::{
+    BTreeMap,
+    VecDeque
+};
+
 use crate::{
     common::*,
     a2::A2,
@@ -26,6 +31,61 @@ pub enum Tool {
     PlaceSky
 }
 
+#[derive(Copy,Clone,Debug)]
+struct Edit {
+    iy:usize,
+    ix:usize,
+    old:Tile,
+    new:Tile,
+}
+
+struct Undo {
+    undo:VecDeque<Edit>,
+    redo:VecDeque<Edit>,
+    limit:usize
+}
+
+impl Undo {
+    pub fn new()->Self {
+	Self {
+	    undo:VecDeque::new(),
+	    redo:VecDeque::new(),
+	    limit:50
+	}
+    }
+
+    pub fn edit(&mut self,edit:Edit) {
+	self.undo.push_back(edit);
+	if self.undo.len() > self.limit {
+	    self.undo.pop_front();
+	}
+    }
+
+    pub fn undo(&mut self)->Option<Edit> {
+	if let Some(edit) = self.undo.pop_back() {
+	    self.redo.push_back(edit);
+	    if self.redo.len() > self.limit {
+		self.redo.pop_front();
+	    }
+	    Some(edit)
+	} else {
+	    None
+	}
+    }
+
+    pub fn redo(&mut self)->Option<Edit> {
+	if let Some(edit) = self.redo.pop_back() {
+	    self.undo.push_back(edit);
+	    if self.undo.len() > self.limit {
+		self.undo.pop_front();
+	    }
+	    Some(edit)
+	} else {
+	    None
+	}
+    }
+}
+
 pub struct TileViewer {
     img:Option<load::TexturePoll>,
     ny:isize,
@@ -41,7 +101,8 @@ pub struct TileViewer {
     hover:Option<(usize,usize)>,
     last_edit:Option<(usize,usize)>,
     refresher:Refresher,
-    rng:MiniRNG
+    rng:MiniRNG,
+    undos:BTreeMap<usize,Undo>
 }
 
 #[derive(Copy,Clone)]
@@ -97,7 +158,8 @@ impl TileViewer {
 	       hover:None,
 	       last_edit:None,
 	       refresher:Refresher::new(0.05),
-	       rng:MiniRNG::new(1)
+	       rng:MiniRNG::new(1),
+	       undos:BTreeMap::new()
 	}
     }
 
@@ -192,6 +254,38 @@ impl TileViewer {
     pub fn take_goto(&mut self)->Option<usize> {
 	self.goto.take()
     }
+
+    fn edit(&mut self,room:&mut RefMut<'_,Room>,iy:usize,ix:usize,tile:Tile) {
+	let undo = self.undos.entry(room.id).or_insert_with(Undo::new);
+	let old = room.map()[[iy,ix]];
+	let new = room.modify(iy,ix,tile);
+	let edit = Edit { iy,ix,old,new };
+	undo.edit(edit);
+    }
+
+    pub fn undo(&mut self) {
+	if let Some(room_ptr) = self.room.as_ref().map(|p| p.refer()) {
+	    let mut room = room_ptr.yank_mut();
+	    let undo = self.undos.entry(room.id).or_insert_with(Undo::new);
+	    if let Some(edit) = undo.undo() {
+		room.modify(edit.iy,edit.ix,edit.old);
+	    }
+	} else {
+	    self.info("No room");
+	}
+    }
+
+    pub fn redo(&mut self) {
+	if let Some(room_ptr) = self.room.as_ref().map(|p| p.refer()) {
+	    let mut room = room_ptr.yank_mut();
+	    let undo = self.undos.entry(room.id).or_insert_with(Undo::new);
+	    if let Some(edit) = undo.redo() {
+		room.modify(edit.iy,edit.ix,edit.new);
+	    }
+	} else {
+	    self.info("No room");
+	}
+    }
     
     pub fn do_ui(&mut self,ui:&mut Ui)->Response {
 	let (ny,nx) = (self.ny,self.nx);
@@ -261,14 +355,16 @@ impl TileViewer {
 						    }
 						},
 						Tool::Place(tile) => {
-						    room.modify(iy,ix,tile);
+						    self.edit(&mut room,iy,ix,tile);
+						    // room.modify(iy,ix,tile);
 						    self.last_edit = Some((iy,ix));
 						    self.hover = None;
 						},
 						Tool::PlaceSky => {
 						    let tile = Tile::Sky(
 							Random { i:self.rng.sample_u32(20) });
-						    room.modify(iy,ix,tile);
+						    // room.modify(iy,ix,tile);
+						    self.edit(&mut room,iy,ix,tile);
 						    self.last_edit = Some((iy,ix));
 						    self.hover = None;
 						}

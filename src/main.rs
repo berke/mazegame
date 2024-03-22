@@ -268,8 +268,6 @@ impl eframe::App for Leved {
 			    // 	    ui.add(&mut self.tv);
 			    // 	});
 
-			    let tm = self.tv.get_tool_mut();
-
 			    let event_filter = EventFilter {
 				horizontal_arrows:false,
 				vertical_arrows:false,
@@ -283,10 +281,18 @@ impl eframe::App for Leved {
 			    for event in &events {
 				match event {
 				    Event::Text(u) => {
-					for &(key,tool,_) in TILE_PALETTE {
-					    if key == u {
-						*tm = tool;
-						break;
+					match u.as_str() {
+					    "u" => self.tv.undo(),
+					    "r" => self.tv.redo(),
+					    _ => {
+						let tm = self.tv.get_tool_mut();
+
+						for &(key,tool,_) in TILE_PALETTE {
+						    if key == u {
+							*tm = tool;
+							break;
+						    }
+						}
 					    }
 					}
 				    },
@@ -297,6 +303,7 @@ impl eframe::App for Leved {
 			    ui.separator();
 			    ui.label(&self.message);
 
+			    let tm = self.tv.get_tool_mut();
 			    ui.separator();
 			    let num_rows = 8;
 			    Grid::new("palette")

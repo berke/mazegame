@@ -37,7 +37,7 @@ impl Room {
     // 	&mut self.map
     // }
 
-    pub fn modify(&mut self,iy:usize,ix:usize,mut tile:Tile) {
+    pub fn modify(&mut self,iy:usize,ix:usize,mut tile:Tile)->Tile {
 	use Tile::*;
 
 	let old_tile = self.map[[iy,ix]];
@@ -58,6 +58,8 @@ impl Room {
 	
 	println!("Setting ({},{}) to {:?}",iy,ix,tile);
 	self.map[[iy,ix]] = tile;
+
+	tile
     }
     
     pub fn dims(&self)->(usize,usize) {
