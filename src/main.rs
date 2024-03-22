@@ -112,6 +112,23 @@ impl Leved {
 		      .ok())
     }
 
+    fn udw(&mut self,_ui:&mut Ui) {
+	if let Some((ta1,ta2)) = self.tv.selection1().zip(self.tv.selection2()) {
+	    if let Some(tt) = self.world.get_tile(&ta1).zip(self.world.get_tile(&ta2)) {
+		match tt {
+		    (Tile::Door(mut d),Tile::Object(o)) => {
+			d.key = Some(o);
+			d.locked = true;
+			self.world.set_tile(&ta1,Tile::Door(d));
+			return;
+		    },
+		    _ => ()
+		}
+	    }
+	}
+	self.message("Select door in green and object in red");
+    }
+
     fn connect(&mut self,_ui:&mut Ui) {
 	if let Some((ta1,ta2)) = self.tv.selection1().zip(self.tv.selection2()) {
 	    if let Some(tt) = self.world.get_tile(&ta1).zip(self.world.get_tile(&ta2)) {
@@ -165,6 +182,8 @@ const TILE_PALETTE : & [(&str,Tool,&str)] = &[
     ("e",Tool::Place(Tile::Object(Object::Eggplant)),"EGGPLANT"),
     ("b",Tool::Place(Tile::Object(Object::Banana)),"BANANA"),
     ("R",Tool::Place(Tile::Rainbow),"RAINBOW"),
+    ("L",Tool::Lock,"LOCK"),
+    ("U",Tool::Unlock,"UNLOCK"),
 ];
 
 impl eframe::App for Leved {
@@ -225,30 +244,7 @@ impl eframe::App for Leved {
 						self.connect(ui);
 					    }
 					    if ui.button("UDW").clicked() {
-
-					    }
-					    if ui.button("ID").clicked() {
-						// if let Some(room_ptr) = self.tv.room() {
-						//     let room = room_ptr.yank_mut();
-						//     if let Some((iy,ix)) = self.tv.selection1() {
-						// 	let map = room.map();
-						// 	if let Tile::Door(door) = map[[iy,ix]] {
-						// 	    self.door_editor =
-						// 		Some(DoorEditor {
-						// 		    room:room.id,
-						// 		    indices:(iy,ix),
-						// 		    door
-						// 		});
-						// 	    self.door_props_open = true;
-						// 	} else {
-						// 	    self.message("This is not a door!");
-						// 	}
-						//     } else {
-						// 	self.message("You have to select a tile by right-clicking");
-						//     }
-						// } else {
-						//     self.message("There is no room");
-						// }
+						self.udw(ui);
 					    }
 					});
 				    });

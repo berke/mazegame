@@ -28,7 +28,9 @@ use crate::{
 pub enum Tool {
     Nothing,
     Place(Tile),
-    PlaceSky
+    PlaceSky,
+    Lock,
+    Unlock
 }
 
 #[derive(Copy,Clone,Debug)]
@@ -212,7 +214,8 @@ impl TileViewer {
 		Object::Carrot => tile(1,8)
 	    },
 	    Tile::Door(Door{ target:None, .. }) => tile(2,3),
-	    Tile::Door(Door{ key:None, .. }) => tile(0,2),
+	    Tile::Door(Door{ key:None, locked:false, .. }) => tile(0,2),
+	    Tile::Door(Door{ key:None, locked:true, .. }) => tile(3,3),
 	    Tile::Door(Door{ key:Some(_), locked:true, ..}) => tile(1,3),
 	    Tile::Door(Door{ key:Some(_), locked:false, ..}) => tile(1,4),
 	    Tile::Vortex => tile(0,7),
@@ -261,6 +264,8 @@ impl TileViewer {
 	let new = room.modify(iy,ix,tile);
 	let edit = Edit { iy,ix,old,new };
 	undo.edit(edit);
+	self.last_edit = Some((iy,ix));
+	self.hover = None;
     }
 
     pub fn undo(&mut self) {
@@ -356,17 +361,23 @@ impl TileViewer {
 						},
 						Tool::Place(tile) => {
 						    self.edit(&mut room,iy,ix,tile);
-						    // room.modify(iy,ix,tile);
-						    self.last_edit = Some((iy,ix));
-						    self.hover = None;
 						},
 						Tool::PlaceSky => {
 						    let tile = Tile::Sky(
 							Random { i:self.rng.sample_u32(20) });
-						    // room.modify(iy,ix,tile);
 						    self.edit(&mut room,iy,ix,tile);
-						    self.last_edit = Some((iy,ix));
-						    self.hover = None;
+						},
+						Tool::Lock => {
+						    if let Tile::Door(mut d) = room.map()[[iy,ix]] {
+							d.locked = true;
+							self.edit(&mut room,iy,ix,Tile::Door(d));
+						    }
+						},
+						Tool::Unlock => {
+						    if let Tile::Door(mut d) = room.map()[[iy,ix]] {
+							d.locked = false;
+							self.edit(&mut room,iy,ix,Tile::Door(d));
+						    }
 						}
 					    }
 					}
@@ -455,6 +466,8 @@ impl TileViewer {
 		    Some((iy,ix)) => {
 			let col = match self.tool {
 			    Tool::Nothing => Color32::WHITE,
+			    Tool::Unlock => Color32::GREEN,
+			    Tool::Lock => Color32::RED,
 			    Tool::Place(_) | Tool::PlaceSky => {
 				let x = ui.input(|input| input.time).rem_euclid(1.0) < 0.5;
 				ui.ctx().request_repaint_after(Duration::from_millis(100));

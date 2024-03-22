@@ -187,7 +187,7 @@ impl World {
 	self.rooms.get(&ta.room_id)
 	    .map_or((),|room_ptr| {
 		let mut room = room_ptr.yank_mut();
-		room.map[[ta.iy,ta.ix]] = tile;
+		let _ = room.modify(ta.iy,ta.ix,tile);
 	    })
     }
 }
