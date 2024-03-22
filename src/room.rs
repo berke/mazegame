@@ -50,7 +50,7 @@ impl Room {
 	    if self.doors.contains_key(&d.id) {
 		d.id = self.doors.last_key_value().map(|(&k,_v)| k + 1)
 		    .unwrap_or(0);
-		println!("Adjusted door ID to {}",d.id);
+		// println!("Adjusted door ID to {}",d.id);
 	    }
 
 	    self.doors.insert(d.id,(iy,ix));

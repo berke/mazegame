@@ -13,6 +13,7 @@ use crate::{
 	World,
 	TileAddress
     },
+    mini_rng::MiniRNG,
     ptr::*,
     refresher::Refresher,
     room::Room
@@ -21,7 +22,8 @@ use crate::{
 #[derive(Copy,Clone,PartialEq)]
 pub enum Tool {
     Nothing,
-    Place(Tile)
+    Place(Tile),
+    PlaceSky
 }
 
 pub struct TileViewer {
@@ -38,7 +40,8 @@ pub struct TileViewer {
     goto:Option<usize>,
     hover:Option<(usize,usize)>,
     last_edit:Option<(usize,usize)>,
-    refresher:Refresher
+    refresher:Refresher,
+    rng:MiniRNG
 }
 
 #[derive(Copy,Clone)]
@@ -93,7 +96,8 @@ impl TileViewer {
 	       goto:None,
 	       hover:None,
 	       last_edit:None,
-	       refresher:Refresher::new(0.05)
+	       refresher:Refresher::new(0.05),
+	       rng:MiniRNG::new(1)
 	}
     }
 
@@ -258,6 +262,12 @@ impl TileViewer {
 						Tool::Place(tile) => {
 						    room.modify(iy,ix,tile);
 						    self.last_edit = Some((iy,ix));
+						},
+						Tool::PlaceSky => {
+						    let tile = Tile::Sky(
+							Random { i:self.rng.sample_u32(20) });
+						    room.modify(iy,ix,tile);
+						    self.last_edit = Some((iy,ix));
 						}
 					    }
 					}
@@ -346,7 +356,7 @@ impl TileViewer {
 		    Some((iy,ix)) => {
 			let col = match self.tool {
 			    Tool::Nothing => Color32::WHITE,
-			    Tool::Place(_) => {
+			    Tool::Place(_) | Tool::PlaceSky => {
 				let x = ui.input(|input| input.time).rem_euclid(1.0) < 0.5;
 				ui.ctx().request_repaint_after(Duration::from_millis(100));
 				if x {

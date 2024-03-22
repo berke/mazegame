@@ -153,7 +153,7 @@ const TILE_PALETTE : & [(&str,Tool,&str)] = &[
     ("m",Tool::Place(Tile::Metal),"METAL"),
     ("A",Tool::Place(Tile::Alien),"ALIEN"),
     ("x",Tool::Place(Tile::MetalFoot),"METAL FOOT"),
-    ("^",Tool::Place(Tile::Sky(Random { i:1 })),"SKY"),
+    ("^",Tool::PlaceSky,"SKY"),
     ("D",Tool::Place(Tile::Door(Door { id:0,target:None,key:None,locked:false })),"DOOR"),
     ("K",Tool::Place(Tile::Object(Object::Key)),"KEY"),
     ("T",Tool::Place(Tile::Object(Object::ToyCar)),"TOY CAR"),
