@@ -34,7 +34,8 @@ pub struct TileViewer {
     selection2:Option<TileAddress>,
     tool:Tool,
     info:String,
-    goto:Option<usize>
+    goto:Option<usize>,
+    hover:Option<(usize,usize)>
 }
 
 #[derive(Copy,Clone)]
@@ -55,6 +56,8 @@ impl TileViewer {
 
     pub fn set_room(&mut self,room:Option<Ptr<Room>>) {
 	self.room = room;
+	self.hover = None;
+	self.info.clear();
     }
 
     pub fn room(&self)->Option<Ptr<Room>> {
@@ -83,7 +86,8 @@ impl TileViewer {
 	       selection2:None,
 	       tool:Tool::Nothing,
 	       info:String::new(),
-	       goto:None
+	       goto:None,
+	       hover:None
 	}
     }
 
@@ -95,7 +99,7 @@ impl TileViewer {
 	self.selection2
     }
 
-    fn tile_rect(&self,p0:Pos2,iy:isize,ix:isize,enlarge:f32)->Rect {
+    fn tile_rect(&self,p0:Pos2,iy:usize,ix:usize,enlarge:f32)->Rect {
 	let p1 = p0 + vec2(ix as f32,iy as f32)*self.tile_size;
 	let p2 = p1 + self.tile_size;
 
@@ -150,12 +154,12 @@ impl TileViewer {
 	}
     }
 
-    fn which_tile(&self,p0:Pos2,p:Pos2)->Option<(isize,isize)> {
+    fn which_tile(&self,p0:Pos2,p:Pos2)->Option<(usize,usize)> {
 	let r = (p - p0) / self.tile_size;
 	let iy = r[1].floor() as isize;
 	let ix = r[0].floor() as isize;
 	if 0 <= iy && iy < self.ny && 0 <= ix && ix < self.nx {
-	    Some((iy,ix))
+	    Some((iy as usize,ix as usize))
 	} else {
 	    None
 	}
@@ -199,8 +203,8 @@ impl TileViewer {
 		let mut room = room_ptr.yank_mut();
 
 		let room_id = room.id;
-		let map = room.map_mut();
-		let (ny,nx) = map.dims();
+		// let map = room.map();
+		let (ny,nx) = room.map().dims();
 
 		self.img.get_or_insert_with(|| {
 		    include_image!("../gfx/tiles.png")
@@ -218,9 +222,12 @@ impl TileViewer {
 		}
 
 		if let Some((iy,ix)) = hover {
-		    let mut info = String::new();
-		    write!(info,"({:02},{:02}) {}",iy,ix,map[[iy,ix]]).unwrap();
-		    self.info = info;
+		    if hover != self.hover {
+			let mut info = String::new();
+			write!(info,"({:02},{:02}) {}",iy,ix,room.map()[[iy,ix]]).unwrap();
+			self.info = info;
+			self.hover = hover;
+		    }
 		}
 
 		if response.is_pointer_button_down_on() {
@@ -233,12 +240,11 @@ impl TileViewer {
 					    Tool::Nothing => {
 						if let Tile::Door(
 						    Door { target:Some(Target { room, .. }),
-							   .. }) = map[[iy,ix]] {
+							   .. }) = room.map()[[iy,ix]] {
 						    self.goto = Some(room);
 						}
 					    },
-					    Tool::Place(tile) =>
-						map[[iy,ix]] = tile,
+					    Tool::Place(tile) => room.modify(iy,ix,tile)
 					}
 				    } else if input.pointer
 				    .button_pressed(PointerButton::Secondary) {
@@ -262,35 +268,38 @@ impl TileViewer {
 		    }
 		}
 
-		for iy in 0..ny {
-		    for ix in 0..nx {
-			let p1 = p0 + vec2(ix as f32,iy as f32)*self.tile_size;
-			let p2 = p1 + self.tile_size;
-			let rect = Rect::from_points(&[p1,p2]);
-			match self.find_tile(map[[iy,ix]]) {
-			    TileAspect::Solid(color) => {
-				ui.painter().rect(
-				    Rect::from_points(&[p1,p2]),
-				    0.0,
-				    color,
-				    Stroke::NONE
-				);
-			    },
-			    TileAspect::FromImage(q0,q1) => {
-				if let Some(TexturePoll::Ready { texture })
-				    = self.img {
-					let ts = texture.size;
-					let u0 = q0/ts;
-					let u1 = q1/ts;
-					let uv = Rect::from_points(
-					    &[u0.to_pos2(),u1.to_pos2()]);
-					ui.painter().image(
-					    texture.id,
-					    rect,
-					    uv,
-					    Color32::WHITE
-					);
-				    }
+		{
+		    let map = room.map();
+		    for iy in 0..ny {
+			for ix in 0..nx {
+			    let p1 = p0 + vec2(ix as f32,iy as f32)*self.tile_size;
+			    let p2 = p1 + self.tile_size;
+			    let rect = Rect::from_points(&[p1,p2]);
+			    match self.find_tile(map[[iy,ix]]) {
+				TileAspect::Solid(color) => {
+				    ui.painter().rect(
+					Rect::from_points(&[p1,p2]),
+					0.0,
+					color,
+					Stroke::NONE
+				    );
+				},
+				TileAspect::FromImage(q0,q1) => {
+				    if let Some(TexturePoll::Ready { texture })
+					= self.img {
+					    let ts = texture.size;
+					    let u0 = q0/ts;
+					    let u1 = q1/ts;
+					    let uv = Rect::from_points(
+						&[u0.to_pos2(),u1.to_pos2()]);
+					    ui.painter().image(
+						texture.id,
+						rect,
+						uv,
+						Color32::WHITE
+					    );
+					}
+				}
 			    }
 			}
 		    }

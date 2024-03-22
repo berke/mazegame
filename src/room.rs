@@ -1,3 +1,10 @@
+use std::collections::BTreeMap;
+
+use anyhow::{
+    bail,
+    Result
+};
+
 use serde::{
     Deserialize,
     Serialize
@@ -16,7 +23,7 @@ pub struct Room {
     pub rows:usize,
     pub cols:usize,
     pub map:A2<Tile>,
-    pub doors:Vec<Option<(usize,usize)>>,
+    pub doors:BTreeMap<usize,(usize,usize)>,
     pub name:String,
     pub start:(usize,usize)
 }
@@ -26,8 +33,29 @@ impl Room {
 	&self.map
     }
 
-    pub fn map_mut(&mut self)->&mut A2<Tile> {
-	&mut self.map
+    // pub fn map_mut(&mut self)->&mut A2<Tile> {
+    // 	&mut self.map
+    // }
+
+    pub fn modify(&mut self,iy:usize,ix:usize,tile:Tile) {
+	use Tile::*;
+
+	let old_tile = self.map[[iy,ix]];
+
+	if let Door(d_old) = old_tile {
+	    self.doors.remove(&d_old.id);
+	}
+	
+	if let Door(mut d) = tile {
+	    if self.doors.contains_key(&d.id) {
+		// Adjust door ID
+		d.id = self.doors.last_key_value().map(|(&k,_v)| k + 1).unwrap_or(0)
+	    }
+
+	    self.doors.insert(d.id,(iy,ix));
+	}
+	
+	self.map[[iy,ix]] = tile;
     }
     
     pub fn dims(&self)->(usize,usize) {
@@ -43,9 +71,9 @@ impl Room {
     }
 
     pub fn find_door(&mut self,door:usize)->&mut Door {
-	match self.doors[door] {
+	match self.doors.get(&door) {
 	    None => panic!("Door not defined"),
-	    Some((i,j)) => {
+	    Some(&(i,j)) => {
 		match &mut self.map[[i,j]] {
 		    Tile::Door(d) => d,
 		    _ => panic!("Not a door")
@@ -61,7 +89,7 @@ impl Room {
 	    rows,
 	    cols,
 	    map,
-	    doors:Vec::new(),
+	    doors:BTreeMap::new(),
 	    name:format!("Room {}",id),
 	    start:(rows/2,cols/2)
 	}
@@ -72,9 +100,8 @@ impl Room {
 	let rows = a.len();
 	let cols = a[0].len();
 	let mut map = A2::new((rows as isize,cols as isize),Tile::Empty);
-	let mut doors = Vec::new();
+	let mut doors = BTreeMap::new();
 	let mut start = (0,0);
-	doors.resize(10,None);
 	for i in 0..rows {
 	    // println!("ROW {:2} [{}]",i,a[i]);
 	    for (j,c) in a[i].chars().enumerate() {
@@ -104,7 +131,7 @@ impl Room {
 			'^' => Tile::Sky(Random::new(rng.sample_u32(20))),
 			'0'..='9' => {
 			    let x = c.to_digit(10).unwrap() as usize;
-			    doors[x] = Some((i,j));
+			    doors.insert(x,(i,j));
 			    Tile::Door(Door{ id:x,target:None,key:None,
 					     locked:false })
 			},

@@ -43,8 +43,8 @@ pub struct World {
 #[derive(Copy,Clone,PartialEq)]
 pub struct TileAddress {
     pub room_id:usize,
-    pub iy:isize,
-    pub ix:isize
+    pub iy:usize,
+    pub ix:usize
 }
 
 use std::cell::RefCell;

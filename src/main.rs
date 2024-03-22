@@ -416,6 +416,7 @@ impl Leved {
 			    let id = self.world.last_id().unwrap_or(0) + 1;
 			    let room = Room::empty(id,48,48);
 			    self.world.insert_room(room);
+			    self.goto_room(id);
 			}
 		    });
 		});
