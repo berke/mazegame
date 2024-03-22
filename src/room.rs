@@ -37,7 +37,7 @@ impl Room {
     // 	&mut self.map
     // }
 
-    pub fn modify(&mut self,iy:usize,ix:usize,tile:Tile) {
+    pub fn modify(&mut self,iy:usize,ix:usize,mut tile:Tile) {
 	use Tile::*;
 
 	let old_tile = self.map[[iy,ix]];
@@ -46,15 +46,17 @@ impl Room {
 	    self.doors.remove(&d_old.id);
 	}
 	
-	if let Door(mut d) = tile {
+	if let Door(d) = &mut tile {
 	    if self.doors.contains_key(&d.id) {
-		// Adjust door ID
-		d.id = self.doors.last_key_value().map(|(&k,_v)| k + 1).unwrap_or(0)
+		d.id = self.doors.last_key_value().map(|(&k,_v)| k + 1)
+		    .unwrap_or(0);
+		println!("Adjusted door ID to {}",d.id);
 	    }
 
 	    self.doors.insert(d.id,(iy,ix));
 	}
 	
+	println!("Setting ({},{}) to {:?}",iy,ix,tile);
 	self.map[[iy,ix]] = tile;
     }
     

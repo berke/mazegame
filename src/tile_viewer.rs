@@ -35,7 +35,8 @@ pub struct TileViewer {
     tool:Tool,
     info:String,
     goto:Option<usize>,
-    hover:Option<(usize,usize)>
+    hover:Option<(usize,usize)>,
+    last_edit:Option<(usize,usize)>
 }
 
 #[derive(Copy,Clone)]
@@ -57,6 +58,7 @@ impl TileViewer {
     pub fn set_room(&mut self,room:Option<Ptr<Room>>) {
 	self.room = room;
 	self.hover = None;
+	self.last_edit = None;
 	self.info.clear();
     }
 
@@ -87,7 +89,8 @@ impl TileViewer {
 	       tool:Tool::Nothing,
 	       info:String::new(),
 	       goto:None,
-	       hover:None
+	       hover:None,
+	       last_edit:None
 	}
     }
 
@@ -236,36 +239,43 @@ impl TileViewer {
 			    ui.input(|input| {
 				if input.pointer
 				    .button_down(PointerButton::Primary) {
-					match self.tool {
-					    Tool::Nothing => {
-						if let Tile::Door(
-						    Door { target:Some(Target { room, .. }),
-							   .. }) = room.map()[[iy,ix]] {
-						    self.goto = Some(room);
+					if Some((iy,ix)) != self.last_edit {
+					    match self.tool {
+						Tool::Nothing => {
+						    if let Tile::Door(
+							Door { target:Some(Target { room, .. }),
+							       .. }) = room.map()[[iy,ix]] {
+							self.goto = Some(room);
+						    }
+						},
+						Tool::Place(tile) => {
+						    room.modify(iy,ix,tile);
+						    self.last_edit = Some((iy,ix));
 						}
-					    },
-					    Tool::Place(tile) => room.modify(iy,ix,tile)
-					}
-				    } else if input.pointer
-				    .button_pressed(PointerButton::Secondary) {
-					let sel =
-					    if input.modifiers.shift {
-						&mut self.selection2
-					    } else {
-						&mut self.selection1
-					    };
-					let new_sel = Some(TileAddress { room_id,iy,ix });
-					if *sel == new_sel {
-					    *sel = None;
-					} else {
-					    *sel = new_sel;
+					    }
 					}
 				    } else {
-					hover = Some((iy,ix));
+					self.last_edit = None;
+					if input.pointer.button_pressed(PointerButton::Secondary) {
+					    let sel =
+						if input.modifiers.shift {
+						    &mut self.selection2
+						} else {
+						    &mut self.selection1
+						};
+					    let new_sel = Some(TileAddress { room_id,iy,ix });
+					    if *sel == new_sel {
+						*sel = None;
+					    } else {
+						*sel = new_sel;
+					    }
+					}
 				    }
 			    });
 			}
 		    }
+		} else {
+		    self.last_edit = None;
 		}
 
 		{
@@ -327,10 +337,22 @@ impl TileViewer {
 
 		match hover {
 		    Some((iy,ix)) => {
+			let col = match self.tool {
+			    Tool::Nothing => Color32::WHITE,
+			    Tool::Place(_) => {
+				let x = ui.input(|input| input.time).rem_euclid(1.0) < 0.5;
+				ui.ctx().request_repaint_after(Duration::from_millis(100));
+				if x {
+				    Color32::from_rgb(255,128,20)
+				} else {
+				    Color32::from_rgb(255,64,10)
+				}
+			    }
+			};
 			ui.painter().rect_stroke(
 			    self.tile_rect(p0,iy,ix,3.0),
 			    0.0,
-			    Stroke::new(2.0,Color32::WHITE));
+			    Stroke::new(2.0,col));
 		    },
 		    _ => ()
 		}

@@ -135,7 +135,7 @@ impl Leved {
 }
 
 const TILE_PALETTE : & [(&str,Tool,&str)] = &[
-    ("",Tool::Nothing,"DO NOTHING"),
+    ("i",Tool::Nothing,"INFO"),
     (" ",Tool::Place(Tile::Empty),"EMPTY"),
     ("%",Tool::Place(Tile::Dirt),"DIRT"),
     ("#",Tool::Place(Tile::Brick),"BRICK"),
