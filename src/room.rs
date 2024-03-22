@@ -105,7 +105,8 @@ impl Room {
 			'0'..='9' => {
 			    let x = c.to_digit(10).unwrap() as usize;
 			    doors[x] = Some((i,j));
-			    Tile::Door(Door{ target:None, key:None, locked:false })
+			    Tile::Door(Door{ id:x,target:None,key:None,
+					     locked:false })
 			},
 			_ => if let Ok(obj) = Object::from_char(c) {
 			    Tile::Object(obj)

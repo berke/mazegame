@@ -18,6 +18,13 @@ pub enum Tool {
     Place(Tile)
 }
 
+#[derive(Copy,Clone,PartialEq)]
+pub struct TileAddress {
+    pub room_id:usize,
+    pub iy:isize,
+    pub ix:isize
+}
+
 pub struct TileViewer {
     img:Option<load::TexturePoll>,
     ny:isize,
@@ -25,8 +32,8 @@ pub struct TileViewer {
     tile_size:Vec2,
     room:Option<Ptr<Room>>,
     rainbow_index:usize,
-    selection1:Option<(isize,isize)>,
-    selection2:Option<(isize,isize)>,
+    selection1:Option<TileAddress>,
+    selection2:Option<TileAddress>,
     tool:Tool
 }
 
@@ -77,11 +84,11 @@ impl TileViewer {
 	       tool:Tool::Place(Tile::Empty) }
     }
 
-    pub fn selection1(&self)->Option<(isize,isize)> {
+    pub fn selection1(&self)->Option<TileAddress> {
 	self.selection1
     }
 
-    pub fn selection2(&self)->Option<(isize,isize)> {
+    pub fn selection2(&self)->Option<TileAddress> {
 	self.selection2
     }
 
@@ -148,6 +155,7 @@ impl TileViewer {
 	    if let Some(room_ptr) = &self.room {
 		let mut room = room_ptr.yank_mut();
 		// ui.text_edit_singleline(&mut room.name);
+		let room_id = room.id;
 		let map = room.map_mut();
 		let (ny,nx) = map.dims();
 
@@ -183,7 +191,7 @@ impl TileViewer {
 					    } else {
 						&mut self.selection1
 					    };
-					let new_sel = Some((iy,ix));
+					let new_sel = Some(TileAddress { room_id,iy,ix });
 					if *sel == new_sel {
 					    *sel = None;
 					} else {
@@ -226,14 +234,15 @@ impl TileViewer {
 				    }
 			    }
 			}
-			if Some((iy,ix)) == self.selection1 {
+			let here = TileAddress { iy,ix,room_id };
+			if Some(here) == self.selection1 {
 			    ui.painter().rect_stroke(
 				Rect::from_points(&[p1,p2]),
 				0.0,
 				Stroke::new(2.0,Color32::GREEN)
 			    );
 			}
-			if Some((iy,ix)) == self.selection2 {
+			if Some(here) == self.selection2 {
 			    ui.painter().rect_stroke(
 				Rect::from_points(&[p1 + vec2(2.0,2.0),
 						    p2 - vec2(2.0,2.0)]),

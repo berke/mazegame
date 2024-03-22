@@ -51,6 +51,7 @@ pub struct Target {
 
 #[derive(PartialEq,Copy,Clone,Debug,Serialize,Deserialize)]
 pub struct Door {
+    pub id:usize,
     pub target:Option<Target>,
     pub key:Option<Object>,
     pub locked:bool
