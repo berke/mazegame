@@ -17,7 +17,7 @@ use crate::{
     tiles::*
 };
 
-#[derive(Debug,Serialize,Deserialize)]
+#[derive(Debug,Clone,Serialize,Deserialize)]
 pub struct Room {
     pub id:usize,
     pub rows:usize,
@@ -97,7 +97,8 @@ impl Room {
 	}
     }
 
-    pub fn new(id:usize,name:&str,a:&[&str],rng:&mut MiniRNG)->Self {
+    pub fn new(id:usize,name:&str,a:&[&str])->Self {
+	let mut rng = MiniRNG::new(1);
 	// let a : Vec<&str> = descr.split('\n').collect();
 	let rows = a.len();
 	let cols = a[0].len();

@@ -164,6 +164,7 @@ const TILE_PALETTE : & [(&str,Tool,&str)] = &[
     ("t",Tool::Place(Tile::Object(Object::Tomato)),"TOMATO"),
     ("e",Tool::Place(Tile::Object(Object::Eggplant)),"EGGPLANT"),
     ("b",Tool::Place(Tile::Object(Object::Banana)),"BANANA"),
+    ("R",Tool::Place(Tile::Rainbow),"RAINBOW"),
 ];
 
 impl eframe::App for Leved {

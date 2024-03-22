@@ -33,11 +33,10 @@ use crate::{
     ptr::*
 };
 
-#[derive(Debug,Serialize,Deserialize)]
+#[derive(Clone,Debug,Serialize,Deserialize)]
 pub struct World {
     pub rooms:BTreeMap<usize,Ptr<Room>>,
     pub start_room:usize,
-    pub rng:MiniRNG
 }
 
 #[derive(Copy,Clone,PartialEq)]
@@ -131,9 +130,10 @@ impl World {
     }
 
     pub fn new()->Self {
-	World{ rooms:BTreeMap::new(),
-	       start_room:0,
-	       rng:MiniRNG::new(1234) }
+	World {
+	    rooms:BTreeMap::new(),
+	    start_room:0,
+	}
     }
 
     pub fn last_id(&self)->Option<usize> {
@@ -145,7 +145,7 @@ impl World {
     }
 
     pub fn add_room(&mut self,id:usize,name:&str,descr:&[&str]) {
-	let room = Room::new(id,name,descr,&mut self.rng);
+	let room = Room::new(id,name,descr);
 	self.insert_room(room);
     }
 

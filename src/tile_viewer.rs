@@ -214,6 +214,7 @@ impl TileViewer {
 
 		if self.refresher.tick(ui) {
 		    room.next();
+		    self.rainbow_index = (self.rainbow_index + 1).rem_euclid(Self::RAINBOW.len());
 		}
 
 		let room_id = room.id;
@@ -262,12 +263,14 @@ impl TileViewer {
 						Tool::Place(tile) => {
 						    room.modify(iy,ix,tile);
 						    self.last_edit = Some((iy,ix));
+						    self.hover = None;
 						},
 						Tool::PlaceSky => {
 						    let tile = Tile::Sky(
 							Random { i:self.rng.sample_u32(20) });
 						    room.modify(iy,ix,tile);
 						    self.last_edit = Some((iy,ix));
+						    self.hover = None;
 						}
 					    }
 					}

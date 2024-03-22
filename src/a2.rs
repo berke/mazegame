@@ -8,7 +8,7 @@ use std::ops::{
     IndexMut
 };
 
-#[derive(Debug,Serialize,Deserialize)]
+#[derive(Clone,Debug,Serialize,Deserialize)]
 pub struct A2<T> {
     d0:isize,
     d1:isize,
