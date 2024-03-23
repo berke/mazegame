@@ -89,6 +89,7 @@ impl Undo {
 }
 
 pub struct TileViewer {
+    pub world:World,
     img:Option<load::TexturePoll>,
     ny:isize,
     nx:isize,
@@ -110,7 +111,7 @@ pub struct TileViewer {
 
 #[derive(Copy,Clone)]
 enum TileAspect {
-    FromImage(Vec2,Vec2),
+    FromImage((Vec2,Vec2)),
     Solid(Color32)
 }
 
@@ -148,7 +149,9 @@ impl TileViewer {
 	let tile_size = vec2(32.0,32.0);
 	let ny = 48;
 	let nx = 48;
-	Self { img,tile_size,
+	Self { world:World::new(),
+	       img,
+	       tile_size,
 	       rainbow_index:0,
 	       room:None,
 	       ny,
@@ -183,16 +186,22 @@ impl TileViewer {
 	    p1 - enlarge*vec2(1.0,1.0),
 	    p2 + enlarge*vec2(1.0,1.0)])
     }
-    
-    fn find_tile(&self,tl:Tile)->TileAspect {
+
+    fn image(u:u16,v:u16)->TileAspect {
 	let (tw,th) = (16,16);
 	let vec = |u,v| vec2((v*tw) as f32,(u*th) as f32);
-	let tile = |u,v| {
-	    let p0 = vec(u,v);
-	    let p1 = vec(u+1,v+1);
-	    TileAspect::FromImage(p0,p1)
-	};
+	let p0 = vec(u,v);
+	let p1 = vec(u+1,v+1);
+	TileAspect::FromImage((p0,p1))
+    }
+
+    fn hero()->TileAspect {
+	Self::image(4,0)
+    }
+    
+    fn find_tile(&self,tl:Tile)->TileAspect {
 	let fill = TileAspect::Solid;
+	let tile = Self::image;
 	match tl {
 	    Tile::Fire(p) => tile(4+p.i,4),
 	    Tile::Brick => tile(0,0),
@@ -291,6 +300,38 @@ impl TileViewer {
 	    }
 	} else {
 	    self.info("No room");
+	}
+    }
+
+    fn draw_tile(&mut self,ui:&mut Ui,p0:Pos2,iy:isize,ix:isize,ta:TileAspect) {
+	let p1 = p0 + vec2(ix as f32,iy as f32)*self.tile_size;
+	let p2 = p1 + self.tile_size;
+	let rect = Rect::from_points(&[p1,p2]);
+	match ta {
+	    TileAspect::Solid(color) => {
+		ui.painter().rect(
+		    Rect::from_points(&[p1,p2]),
+		    0.0,
+		    color,
+		    Stroke::NONE
+		);
+	    },
+	    TileAspect::FromImage((q0,q1)) => {
+		if let Some(TexturePoll::Ready { texture })
+		    = self.img {
+			let ts = texture.size;
+			let u0 = q0/ts;
+			let u1 = q1/ts;
+			let uv = Rect::from_points(
+			    &[u0.to_pos2(),u1.to_pos2()]);
+			ui.painter().image(
+			    texture.id,
+			    rect,
+			    uv,
+			    Color32::WHITE
+			);
+		    }
+	    }
 	}
     }
     
@@ -421,35 +462,7 @@ impl TileViewer {
 		    let map = room.map();
 		    for iy in 0..ny {
 			for ix in 0..nx {
-			    let p1 = p0 + vec2(ix as f32,iy as f32)*self.tile_size;
-			    let p2 = p1 + self.tile_size;
-			    let rect = Rect::from_points(&[p1,p2]);
-			    match self.find_tile(map[[iy,ix]]) {
-				TileAspect::Solid(color) => {
-				    ui.painter().rect(
-					Rect::from_points(&[p1,p2]),
-					0.0,
-					color,
-					Stroke::NONE
-				    );
-				},
-				TileAspect::FromImage(q0,q1) => {
-				    if let Some(TexturePoll::Ready { texture })
-					= self.img {
-					    let ts = texture.size;
-					    let u0 = q0/ts;
-					    let u1 = q1/ts;
-					    let uv = Rect::from_points(
-						&[u0.to_pos2(),u1.to_pos2()]);
-					    ui.painter().image(
-						texture.id,
-						rect,
-						uv,
-						Color32::WHITE
-					    );
-					}
-				}
-			    }
+			    self.draw_tile(ui,p0,iy,ix,self.find_tile(map[[iy,ix]]));
 			}
 		    }
 		}
@@ -496,6 +509,12 @@ impl TileViewer {
 			    Stroke::new(2.0,col));
 		    },
 		    _ => ()
+		}
+
+		if let Some(TileAddress { room_id:id,iy,ix }) = self.world.start {
+		    if id == room_id {
+			self.draw_tile(ui,p0,iy as isize,ix as isize,Self::hero());
+		    }
 		}
 
 		match self.target_tile {

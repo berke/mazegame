@@ -17,7 +17,10 @@ use tiles::{
     Random
 };
 use object::Object;
-use world::World;
+use world::{
+    World,
+    TileAddress
+};
 use room::Room;
 use tile_viewer::{
     TileViewer,
@@ -56,7 +59,6 @@ struct DoorEditor {
 }
 
 struct Leved {
-    world:World,
     tex:Option<TextureHandle>,
     frame_rate:f32,
     play:bool,
@@ -81,7 +83,6 @@ impl Leved {
 	    tex:None,
 	    frame_rate:10.0,
 	    play:false,
-	    world:World::new(),
 	    tv,
 	    message:String::new(),
 	    path:None,
@@ -109,12 +110,12 @@ impl Leved {
 
     fn udw(&mut self,_ui:&mut Ui) {
 	if let Some((ta1,ta2)) = self.tv.selection1().zip(self.tv.selection2()) {
-	    if let Some(tt) = self.world.get_tile(&ta1).zip(self.world.get_tile(&ta2)) {
+	    if let Some(tt) = self.tv.world.get_tile(&ta1).zip(self.tv.world.get_tile(&ta2)) {
 		match tt {
 		    (Tile::Door(mut d),Tile::Object(o)) => {
 			d.key = Some(o);
 			d.locked = true;
-			self.world.set_tile(&ta1,Tile::Door(d));
+			self.tv.world.set_tile(&ta1,Tile::Door(d));
 			return;
 		    },
 		    _ => ()
@@ -124,9 +125,17 @@ impl Leved {
 	self.message("Select door in green and object in red");
     }
 
+    fn start(&mut self,_ui:&mut Ui) {
+	if let Some(ta) = self.tv.selection1() {
+	    self.tv.world.start = Some(ta);
+	    return;
+	}
+	self.message("Select starting position in green");
+    }
+
     fn connect(&mut self,_ui:&mut Ui) {
 	if let Some((ta1,ta2)) = self.tv.selection1().zip(self.tv.selection2()) {
-	    if let Some(tt) = self.world.get_tile(&ta1).zip(self.world.get_tile(&ta2)) {
+	    if let Some(tt) = self.tv.world.get_tile(&ta1).zip(self.tv.world.get_tile(&ta2)) {
 		match tt {
 		    (Tile::Door(mut d1 @ Door { target:None, .. }),
 		     Tile::Door(mut d2 @ Door { target:None, .. })) => {
@@ -134,8 +143,8 @@ impl Leved {
 						  door:d2.id });
 			d2.target = Some(Target { room:ta1.room_id,
 						  door:d1.id });
-			self.world.set_tile(&ta1,Tile::Door(d1));
-			self.world.set_tile(&ta2,Tile::Door(d2));
+			self.tv.world.set_tile(&ta1,Tile::Door(d1));
+			self.tv.world.set_tile(&ta2,Tile::Door(d2));
 			self.message("Doors connected");
 		    },
 		    _ => {
@@ -225,10 +234,11 @@ impl eframe::App for Leved {
 			ui.vertical(|ui| {
 			    ui.horizontal(|ui| {
 				if let Some(room_ptr) = self.tv.room() {
+				    ui.label("Name:");
 				    let mut room = room_ptr.yank_mut();
 				    ui.text_edit_singleline(&mut room.name);
 				} else {
-				    ui.label("(No name)");
+				    ui.label("No room, create or select one");
 				}
 
 				ui.with_layout(
@@ -240,6 +250,9 @@ impl eframe::App for Leved {
 					    }
 					    if ui.button("UDW").clicked() {
 						self.udw(ui);
+					    }
+					    if ui.button("START").clicked() {
+						self.start(ui);
 					    }
 					});
 				    });
@@ -339,7 +352,7 @@ impl eframe::App for Leved {
 				    let patho = rfd.save_file();
 
 				    if let Some(path) = patho {
-					match self.world.save(&path) {
+					match self.tv.world.save(&path) {
 					    Err(e) => self.message(&format!("Error: {}",e)),
 					    Ok(()) => {
 						self.message(&format!("Saved under {:?}",path));
@@ -363,13 +376,16 @@ impl eframe::App for Leved {
 				    let patho = rfd.pick_file();
 
 				    if let Some(path) = patho {
-					self.world.clear();
-					match self.world.load(&path) {
+					self.tv.world.clear();
+					match self.tv.world.load(&path) {
 					    Err(e) => self.message(&format!("Error: {}",e)),
 					    Ok(()) => {
 						self.message(&format!("Loaded from {:?}",path));
+						println!("Start: {:?}",self.tv.world.start);
 						self.path = Some(path);
-						self.goto_room(self.world.start_room);
+						if let Some(TileAddress { room_id, .. }) = self.tv.world.start {
+						    self.goto_room(room_id);
+						}
 					    }
 					}
 				    }
@@ -413,9 +429,10 @@ impl Leved {
 		|ui| {
 		    ui.horizontal(|ui| {
 			if ui.button("ADD").clicked() {
-			    let id = self.world.last_id().unwrap_or(0) + 1;
+			    let id = self.tv.world.last_id().map(|id| id + 1)
+				.unwrap_or(0);
 			    let room = Room::empty(id,48,48);
-			    self.world.insert_room(room);
+			    self.tv.world.insert_room(room);
 			    self.goto_room(id);
 			}
 		    });
@@ -423,7 +440,9 @@ impl Leved {
 	});
 	ui.separator();
 	let active_id = self.tv.room().map(|p| p.yank().id);
-	for (&iroom,room_ptr) in self.world.rooms.iter() {
+	let room_list = self.tv.world.room_list();
+	for iroom in room_list {
+	    let room_ptr = self.tv.world.get_room(iroom);
 	    let room = room_ptr.yank();
 	    ui.horizontal(|ui| {
 		ui.monospace(format!("{:8}",iroom));
@@ -445,14 +464,14 @@ impl Leved {
 		let rt = RichText::new(&room.name)
 		    .apply_if(active,|t| t.strong());
 		if ui.button(rt).clicked() {
-		    self.tv.set_room(Some(Ptr::clone(room_ptr)));
+		    self.tv.set_room(Some(room_ptr.refer()));
 		}
 	    });
 	};
     }
 
     fn goto_room(&mut self,room_id:usize) {
-	if let Some(room) = self.world.rooms.get(&room_id) {
+	if let Some(room) = self.tv.world.rooms.get(&room_id) {
 	    self.tv.set_room(Some(Ptr::clone(room)));
 	}
     }

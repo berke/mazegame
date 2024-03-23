@@ -3,7 +3,7 @@ use std::collections::VecDeque;
 use crate::{
     position::Position,
     facing::Facing,
-    world::World,
+    world::{TileAddress,World},
     tiles::{Target,Door,Tile},
     object::Object,
     sounds::Sounds,
@@ -47,8 +47,8 @@ impl Hero {
     }
 
     pub fn new(world:&World,name:&str)->Self {
-	let room = world.start_room;
-	let (hi,hj) = world.get_room(room).yank().start;
+	let TileAddress { room_id:room,iy:hi,ix:hj } =
+	    world.start.expect("No start position!");
 	Hero{
 	    room,
 	    position:Position::Block(hi,hj,Facing::Right),

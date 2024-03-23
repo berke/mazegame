@@ -34,10 +34,10 @@ use crate::{
 #[derive(Clone,Debug,Serialize,Deserialize)]
 pub struct World {
     pub rooms:BTreeMap<usize,Ptr<Room>>,
-    pub start_room:usize,
+    pub start:Option<TileAddress>,
 }
 
-#[derive(Copy,Clone,PartialEq)]
+#[derive(Copy,Clone,Debug,PartialEq,Serialize,Deserialize)]
 pub struct TileAddress {
     pub room_id:usize,
     pub iy:usize,
@@ -47,7 +47,7 @@ pub struct TileAddress {
 impl World {
     pub fn clear(&mut self) {
 	self.rooms.clear();
-	self.start_room = 0
+	self.start = None
     }
 
     pub fn save<P:AsRef<Path>>(&self,path:P)->Result<()> {
@@ -57,12 +57,16 @@ impl World {
 	Ok(())
     }
 
+    pub fn room_list(&self)->Vec<usize> {
+	self.rooms.keys().copied().collect()
+    }
+
     pub fn load<P:AsRef<Path>>(&mut self,path:P)->Result<()> {
 	let fd = File::open(path)?;
 	let mut buf = BufReader::new(fd);
 	if let Ok(this) = ron::de::from_reader::<_,World>(&mut buf) {
 	    self.rooms = this.rooms;
-	    self.start_room = this.start_room;
+	    self.start = this.start;
 	    Ok(())
 	} else {
 	    buf.rewind()?;
@@ -99,7 +103,9 @@ impl World {
 			    };
 			self.lock_door_with(g(room)?,g(door)?,obj);
 		    },
-		    ["START",room] => self.start_room = g(room)?,
+		    ["START",room] => {
+			let _ = g(room)?;
+		    },
 		    ["ROOM",id] => {
 			let name = f()?;
 			let mut descr : Vec<String> = Vec::new();
@@ -116,7 +122,8 @@ impl World {
 			}
 			let descr_ref : Vec<&str> = descr.iter().map(|x| x.as_str())
 			    .collect();
-			self.add_room(g(id)?,&name,&descr_ref[..]);
+			let start = self.add_room(g(id)?,&name,&descr_ref[..]);
+			self.start = self.start.or(start);
 		    },
 		    _ => bail!("Invalid stanza {:?}",line)
 		};
@@ -128,7 +135,7 @@ impl World {
     pub fn new()->Self {
 	World {
 	    rooms:BTreeMap::new(),
-	    start_room:0,
+	    start:None,
 	}
     }
 
@@ -140,13 +147,14 @@ impl World {
 	self.rooms.insert(room.id,Ptr::make(room));
     }
 
-    pub fn add_room(&mut self,id:usize,name:&str,descr:&[&str]) {
-	let room = Room::new(id,name,descr);
+    pub fn add_room(&mut self,id:usize,name:&str,descr:&[&str])->Option<TileAddress> {
+	let (room,start) = Room::new(id,name,descr);
 	self.insert_room(room);
+	start
     }
 
     pub fn get_room(&self,id:usize)->Ptr<Room> {
-	self.rooms.get(&id).expect("Room not found").refer()
+	self.rooms.get(&id).expect(&format!("Room {} not found",id)).refer()
     }
 
     pub fn lock_door_with(&mut self,room:usize,door:usize,obj:Object) {

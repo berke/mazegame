@@ -9,7 +9,8 @@ use crate::{
     mini_rng::MiniRNG,
     object::Object,
     a2::A2,
-    tiles::*
+    tiles::*,
+    world::TileAddress
 };
 
 #[derive(Debug,Clone,Serialize,Deserialize)]
@@ -20,7 +21,6 @@ pub struct Room {
     pub map:A2<Tile>,
     pub doors:BTreeMap<usize,(usize,usize)>,
     pub name:String,
-    pub start:(usize,usize)
 }
 
 impl Room {
@@ -93,19 +93,18 @@ impl Room {
 	    cols,
 	    map,
 	    doors:BTreeMap::new(),
-	    name:format!("Room {}",id),
-	    start:(rows/2,cols/2)
+	    name:format!("Room {}",id)
 	}
     }
 
-    pub fn new(id:usize,name:&str,a:&[&str])->Self {
+    pub fn new(id:usize,name:&str,a:&[&str])->(Self,Option<TileAddress>) {
 	let mut rng = MiniRNG::new(1);
 	// let a : Vec<&str> = descr.split('\n').collect();
 	let rows = a.len();
 	let cols = a[0].len();
 	let mut map = A2::new((rows as isize,cols as isize),Tile::Empty);
 	let mut doors = BTreeMap::new();
-	let mut start = (0,0);
+	let mut start = None;
 	for i in 0..rows {
 	    // println!("ROW {:2} [{}]",i,a[i]);
 	    for (j,c) in a[i].chars().enumerate() {
@@ -113,7 +112,8 @@ impl Room {
 		    match c {
 			' ' => Tile::Empty,
 			'H' => {
-			    start = (i,j);
+			    start = Some(TileAddress { room_id:id,
+						       iy:i,ix:j });
 			    Tile::Empty
 			},
 			'#' => Tile::Brick,
@@ -148,14 +148,14 @@ impl Room {
 		map[[i,j]] = t;
 	    }
 	}
-	Self {
+	(Self {
 	    id,
 	    rows,
 	    cols,
 	    map,
 	    doors,
-	    start,
 	    name:name.to_string()
-	}
+	},
+	 start)
     }
 }

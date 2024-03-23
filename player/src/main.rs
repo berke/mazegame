@@ -10,8 +10,6 @@ mod synthesizer;
 use common::*;
 
 pub fn main() -> Result<(),Box<dyn Error>> {
-    println!("Hello........");
-
     let font_height : usize = 16;
     let font_width : usize = 10; // XXX
 
@@ -48,7 +46,7 @@ pub fn main() -> Result<(),Box<dyn Error>> {
 
     device.resume();
 
-    let (window_width,window_height) = (800,600);
+    let (window_width,window_height) = (1440,1024);
     
     let window = video_subsystem.window("Maze Game",
 					window_width as u32,window_height as u32)
@@ -96,8 +94,8 @@ pub fn main() -> Result<(),Box<dyn Error>> {
 	rng:MiniRNG
     }
 
-    const BW : usize = 16;
-    const BH : usize = 16;
+    const BW : usize = 32;
+    const BH : usize = 32;
 
     impl<'a> Redrawer<'a> {
 	fn new<T>(mx:usize,my:usize,ox:usize,oy:usize,tiles:&str,texture_creator:&'a TextureCreator<T>)->Self {
