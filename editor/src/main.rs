@@ -66,7 +66,8 @@ struct Leved {
     message:String,
     door_props_open:bool,
     path:Option<PathBuf>,
-    door_editor:Option<DoorEditor>
+    door_editor:Option<DoorEditor>,
+    delete_safety:bool
 }
 
 fn using<T,F:FnMut(T)>(x:Option<T>,mut f:F) {
@@ -87,7 +88,8 @@ impl Leved {
 	    message:String::new(),
 	    path:None,
 	    door_props_open:false,
-	    door_editor:None
+	    door_editor:None,
+	    delete_safety:false
 	}
     }
 
@@ -440,6 +442,24 @@ impl Leved {
 			    self.tv.world.insert_room(room);
 			    self.goto_room(id);
 			}
+			let delete_safety = self.delete_safety;
+			if delete_safety {
+			    if ui.button("CONFIRM DELETE").clicked() {
+				if let Some(room_ptr) = self.tv.room() {
+				    let room = room_ptr.yank();
+				    self.tv.world.delete_room(room.id);
+				    self.tv.set_room(None);
+				}
+				self.delete_safety = false;
+			    }
+			    if ui.button("CANCEL DELETE").clicked() {
+				self.delete_safety = false;
+			    }
+			} else {
+			    if ui.button("DELETE ROOM").clicked() {
+				self.delete_safety = true;
+			    }
+			}
 		    });
 		});
 	});
@@ -470,6 +490,7 @@ impl Leved {
 		    .apply_if(active,|t| t.strong());
 		if ui.button(rt).clicked() {
 		    self.tv.set_room(Some(room_ptr.refer()));
+		    self.delete_safety = false;
 		}
 	    });
 	};

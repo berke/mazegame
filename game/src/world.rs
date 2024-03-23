@@ -153,6 +153,10 @@ impl World {
 	start
     }
 
+    pub fn delete_room(&mut self,id:usize) {
+	self.rooms.remove(&id);
+    }
+
     pub fn get_room(&self,id:usize)->Ptr<Room> {
 	self.rooms.get(&id).expect(&format!("Room {} not found",id)).refer()
     }
