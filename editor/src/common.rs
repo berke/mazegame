@@ -10,7 +10,10 @@ pub use std::{
 	SystemTime
     },
     sync::Arc,
-    path::PathBuf,
+    path::{
+	Path,
+	PathBuf
+    },
     f64::consts::PI
 };
 

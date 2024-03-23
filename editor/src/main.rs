@@ -154,6 +154,17 @@ impl Leved {
 	    }
 	}
     }
+
+    fn save(&mut self,_ui:&mut Ui) {
+	if let Some(path) = self.path.as_ref() {
+	    match self.tv.world.save(path) {
+		Err(e) => self.message(&format!("Error: {}",e)),
+		Ok(()) => {
+		    self.message(&format!("Saved under {:?}",path));
+		}
+	    }
+	}
+    }
 }
 
 const TILE_PALETTE : & [(&str,Tool,&str)] = &[
@@ -331,6 +342,9 @@ impl eframe::App for Leved {
 			    ui.separator();
 			    ui.horizontal(|ui| {
 				if ui.button("SAVE").clicked() {
+				    self.save(ui);
+				}
+				if ui.button("SAVE AS").clicked() {
 				    let rfd =
 					rfd::FileDialog::new()
 					.set_title("Save world");
@@ -349,17 +363,9 @@ impl eframe::App for Leved {
 					    rfd
 					};
 
-				    let patho = rfd.save_file();
-
-				    if let Some(path) = patho {
-					match self.tv.world.save(&path) {
-					    Err(e) => self.message(&format!("Error: {}",e)),
-					    Ok(()) => {
-						self.message(&format!("Saved under {:?}",path));
-						self.path = Some(path);
-					    }
-
-					}
+				    if let Some(path) = rfd.save_file() {
+					self.path = Some(path);
+					self.save(ui);
 				    }
 				}
 				if ui.button("LOAD").clicked() {
@@ -381,7 +387,6 @@ impl eframe::App for Leved {
 					    Err(e) => self.message(&format!("Error: {}",e)),
 					    Ok(()) => {
 						self.message(&format!("Loaded from {:?}",path));
-						println!("Start: {:?}",self.tv.world.start);
 						self.path = Some(path);
 						if let Some(TileAddress { room_id, .. }) = self.tv.world.start {
 						    self.goto_room(room_id);
