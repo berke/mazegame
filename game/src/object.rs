@@ -51,15 +51,15 @@ impl Object {
     }
     pub fn name(self)->&'static str {
 	match self {
-	    Object::Coin => "a coin",
-	    Object::IceCream => "some ice cream",
-	    Object::Key => "a key",
-	    Object::ToyCar => "a toy car",
-	    Object::SquaresAndTriangles => "some squares and triangles",
-	    Object::Tomato => "a tomato",
-	    Object::Eggplant => "an eggplant",
-	    Object::Banana => "a banana",
-	    Object::Carrot => "a carrot",
+	    Object::Coin => "A COIN",
+	    Object::IceCream => "SOME ICE CREAM",
+	    Object::Key => "A KEY",
+	    Object::ToyCar => "A TOY CAR",
+	    Object::SquaresAndTriangles => "SOME SQUARES AND TRIANGLES",
+	    Object::Tomato => "A TOMATO",
+	    Object::Eggplant => "AN EGGPLANT",
+	    Object::Banana => "A BANANA",
+	    Object::Carrot => "A CARROT",
 	}
     }
     pub fn from_char(c:char)->Result<Self> {
