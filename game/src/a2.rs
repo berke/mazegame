@@ -16,7 +16,7 @@ pub struct A2<T> {
     out:T
 }
 
-impl<T> A2<T> where T:Copy {
+impl<T> A2<T> where T:Copy+Serialize+for <'a> Deserialize<'a> {
     pub fn new((d0,d1):(isize,isize),out:T)->Self {
 	let m = (d0*d1) as usize;
 	let data = vec![out;m];

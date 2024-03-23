@@ -1,7 +1,6 @@
 [workspace]
 resolver = "2"
-#members = ["mzg","leved","game"]
-members = ["game","editor"]
+members = ["game","editor","player"]
 
 [workspace.package]
 version = "0.1.0"
@@ -14,12 +13,11 @@ rust-version = "1.72"
 version = "1"
 
 [workspace.dependencies.serde]
-version = "1.0.152"
+version = "1.0.197"
 features = ["derive"]
 
 [workspace.dependencies.ron]
-version = "0.6"
+version = "0.8.1"
 
 [workspace.dependencies.mzg-game]
-version = "0.1.0"
 path = "game"

@@ -28,9 +28,9 @@ impl Room {
 	&self.map
     }
 
-    // pub fn map_mut(&mut self)->&mut A2<Tile> {
-    // 	&mut self.map
-    // }
+    pub fn map_mut(&mut self)->&mut A2<Tile> {
+	&mut self.map
+    }
 
     pub fn modify(&mut self,iy:usize,ix:usize,mut tile:Tile)->Tile {
 	use Tile::*;
@@ -51,7 +51,7 @@ impl Room {
 	    self.doors.insert(d.id,(iy,ix));
 	}
 	
-	println!("Setting ({},{}) to {:?}",iy,ix,tile);
+	// println!("Setting ({},{}) to {:?}",iy,ix,tile);
 	self.map[[iy,ix]] = tile;
 
 	tile
@@ -69,7 +69,7 @@ impl Room {
 	}
     }
 
-    pub fn locate_door(&mut self,door:usize)->Option<(usize,usize)> {
+    pub fn locate_door(&self,door:usize)->Option<(usize,usize)> {
 	self.doors.get(&door).copied()
     }
     

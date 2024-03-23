@@ -5,9 +5,8 @@
 mod common;
 mod refresher;
 mod tile_viewer;
-mod world;
 
-use mzg_game::*;
+pub use mzg_game::*;
 
 use common::*;
 use a2::A2;

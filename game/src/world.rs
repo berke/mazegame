@@ -5,9 +5,9 @@ use anyhow::{
 };
 
 use std::{
-    cell::RefMut,
     fs::File,
     path::Path,
+    cell::RefCell,
     io::{
 	BufReader,
 	BufRead,
@@ -15,7 +15,6 @@ use std::{
 	Seek
     },
     collections::{
-	HashMap,
 	BTreeMap
     }
 };
@@ -26,7 +25,6 @@ use serde::{
 };
 
 use crate::{
-    mini_rng::MiniRNG,
     room::Room,
     object::Object,
     tiles::*,
@@ -45,8 +43,6 @@ pub struct TileAddress {
     pub iy:usize,
     pub ix:usize
 }
-
-use std::cell::RefCell;
 
 impl World {
     pub fn clear(&mut self) {
@@ -147,6 +143,10 @@ impl World {
     pub fn add_room(&mut self,id:usize,name:&str,descr:&[&str]) {
 	let room = Room::new(id,name,descr);
 	self.insert_room(room);
+    }
+
+    pub fn get_room(&self,id:usize)->Ptr<Room> {
+	self.rooms.get(&id).expect("Room not found").refer()
     }
 
     pub fn lock_door_with(&mut self,room:usize,door:usize,obj:Object) {

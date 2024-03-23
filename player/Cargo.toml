@@ -1,0 +1,23 @@
+[package]
+name = "mzg-player"
+edition = "2021"
+version.workspace = true
+
+[dependencies.sdl2]
+version = "0.34.4"
+features = ["ttf","image"]
+
+[dependencies.image]
+version = "0.21.2"
+
+[dependencies.anyhow]
+workspace = true
+
+[dependencies.serde]
+workspace = true
+
+[dependencies.ron]
+workspace = true
+
+[dependencies.mzg-game]
+workspace = true

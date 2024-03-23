@@ -4,3 +4,4 @@ pub mod object;
 pub mod ptr;
 pub mod room;
 pub mod tiles;
+pub mod world;
