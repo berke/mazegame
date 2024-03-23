@@ -1,0 +1,5 @@
+#!/bin/sh
+
+BASE=/usr/local/mazegame
+
+exec mzg-player $BASE/gfx/liberation-mono-regular.ttf $BASE/gfx/tiles.png $1

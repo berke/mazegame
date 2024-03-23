@@ -1,0 +1,5 @@
+#!/bin/sh
+
+BASE=/usr/local/mazegame
+
+PLAYER_COMMAND=/usr/local/bin/mzg-play exec mzg-editor
