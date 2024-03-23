@@ -323,7 +323,7 @@ impl TileViewer {
 		let (ny,nx) = room.map().dims();
 
 		self.img.get_or_insert_with(|| {
-		    include_image!("../gfx/tiles.png")
+		    include_image!("../../gfx/tiles.png")
 			.load(
 			    ui.ctx(),
 			    TextureOptions::NEAREST_MIRRORED_REPEAT,

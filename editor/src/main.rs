@@ -3,15 +3,11 @@
 #![allow(dead_code)]
 
 mod common;
-mod object;
-mod tiles;
-mod world;
-mod room;
-mod a2;
-mod mini_rng;
-mod tile_viewer;
-mod ptr;
 mod refresher;
+mod tile_viewer;
+mod world;
+
+use mzg_game::*;
 
 use common::*;
 use a2::A2;

@@ -1,0 +1,10 @@
+[package]
+name = "mzg-game"
+edition = "2021"
+version = "0.1.0"
+
+[dependencies.anyhow]
+workspace = true
+
+[dependencies.serde]
+workspace = true
