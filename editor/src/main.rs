@@ -67,7 +67,8 @@ struct Leved {
     door_props_open:bool,
     path:Option<PathBuf>,
     door_editor:Option<DoorEditor>,
-    delete_safety:bool
+    delete_safety:bool,
+    crop_safety:bool
 }
 
 fn using<T,F:FnMut(T)>(x:Option<T>,mut f:F) {
@@ -89,7 +90,8 @@ impl Leved {
 	    path:None,
 	    door_props_open:false,
 	    door_editor:None,
-	    delete_safety:false
+	    delete_safety:false,
+	    crop_safety:false
 	}
     }
 
@@ -135,6 +137,31 @@ impl Leved {
 	self.message("Select starting position in green");
     }
 
+    fn crop(&mut self,_ui:&mut Ui) {
+	if let Some((ta1,ta2)) = self.tv.selection1().zip(self.tv.selection2()) {
+	    if ta1.room_id != ta2.room_id {
+		self.message("Select red and green corners in the same room");
+		return;
+	    }
+	    let iy0 = ta1.iy.min(ta2.iy);
+	    let ix0 = ta1.ix.min(ta2.ix);
+	    let iy1 = ta1.iy.max(ta2.iy);
+	    let ix1 = ta1.ix.max(ta2.ix);
+	    let ny = iy1 - iy0 + 1;
+	    let nx = ix1 - ix0 + 1;
+	    if nx < 1 || ny < 1 {
+		self.message("Room would be empty");
+		return;
+	    }
+
+	    let room_ptr = self.tv.world.get_room(ta1.room_id);
+	    let mut room = room_ptr.yank_mut();
+	    room.crop(iy0,ny,ix0,nx);
+	    self.message(&format!("Room cropped to {} × {}",ny,nx));
+	}
+	self.message("Select two corners");
+    }
+    
     fn connect(&mut self,_ui:&mut Ui) {
 	if let Some((ta1,ta2)) = self.tv.selection1().zip(self.tv.selection2()) {
 	    if let Some(tt) = self.tv.world.get_tile(&ta1).zip(self.tv.world.get_tile(&ta2)) {
@@ -293,6 +320,9 @@ impl eframe::App for Leved {
 					    }
 					    if ui.button("START").clicked() {
 						self.start(ui);
+					    }
+					    if ui.button("CROP").clicked() {
+						self.crop(ui);
 					    }
 					});
 				    });

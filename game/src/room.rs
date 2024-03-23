@@ -24,6 +24,30 @@ pub struct Room {
 }
 
 impl Room {
+    pub fn crop(&mut self,iy0:usize,ny:usize,ix0:usize,nx:usize) {
+	self.rows = ny;
+	self.cols = nx;
+	let mut map = A2::new((ny as isize,nx as isize),Tile::Empty);
+	for iy in 0..ny {
+	    for ix in 0..nx {
+		map[[iy,ix]] = self.map[[iy0 + iy,ix0 + ix]];
+	    }
+	}
+	self.map = map;
+	self.reindex_doors();
+    }
+
+    fn reindex_doors(&mut self) {
+	self.doors.clear();
+	for iy in 0..self.rows {
+	    for ix in 0..self.cols {
+		if let Tile::Door(d) = self.map[[iy,ix]] {
+		    self.doors.insert(d.id,(iy,ix));
+		}
+	    }
+	}
+    }
+
     pub fn map(&self)->&A2<Tile> {
 	&self.map
     }

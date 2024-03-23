@@ -3,6 +3,7 @@ use std::collections::VecDeque;
 use crate::{
     position::Position,
     facing::Facing,
+    room::Room,
     world::{TileAddress,World},
     tiles::{Target,Door,Tile},
     object::Object,
@@ -244,14 +245,12 @@ impl Hero {
 				    match &target {
 					None => self.say("THIS DOOR HAS NOT BEEN INSTALLED CORRECTLY"),
 					&Some(Target{ room, door }) => {
-					    match world.get_room(room).yank().locate_door(door) {
-						None => self.say("THIS DOOR LEADS NOWHERE"),
-						Some((hi,hj)) => {
-						    self.room = room;
-						    self.travel_request = None;
-						    self.position = Position::Block(hi,hj,f);
-						    self.sound(Sounds::GoThroughDoor);
-						}
+					    if room == rm.id {
+						self.traverse(&rm,door,f);
+					    } else {
+						let target_room_ptr = world.get_room(room);
+						let target_room = target_room_ptr.yank();
+						self.traverse(&target_room,door,f);
 					    }
 					}
 				    }
@@ -261,6 +260,18 @@ impl Hero {
 			}
 		    }
 		}
+	    }
+	}
+    }
+
+    fn traverse(&mut self,room:&Room,door:usize,f:Facing) {
+	match room.locate_door(door) {
+	    None => self.say("THIS DOOR LEADS NOWHERE"),
+	    Some((hi,hj)) => {
+		self.room = room.id;
+		self.travel_request = None;
+		self.position = Position::Block(hi,hj,f);
+		self.sound(Sounds::GoThroughDoor);
 	    }
 	}
     }

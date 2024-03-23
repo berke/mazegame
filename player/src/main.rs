@@ -46,7 +46,7 @@ pub fn main() -> Result<(),Box<dyn Error>> {
 
     device.resume();
 
-    let (window_width,window_height) = (1440,1024);
+    let (window_width,window_height) = (1280,900);
     
     let window = video_subsystem.window("Maze Game",
 					window_width as u32,window_height as u32)
