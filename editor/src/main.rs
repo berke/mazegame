@@ -167,6 +167,33 @@ impl Leved {
 	    }
 	}
     }
+
+    fn play(&mut self,_ui:&mut Ui) {
+	use std::process::Command;
+	use std::env::Vars;
+
+	if let Some(path) = self.path.as_ref() {
+	    match std::env::var("PLAYER_COMMAND") {
+		Ok(cmd) => {
+		    match Command::new(cmd)
+			.arg(path)
+			.status() {
+			    Ok(status) => {
+				if !status.success() {
+				    self.message("Player failed");
+				}
+			    },
+			    Err(e) => {
+				self.message(&format!("Could not launch player: {}",e));
+			    }
+			}
+		},
+		Err(_) => {
+		    self.message("No PLAYER_COMMAND environment variable");
+		}
+	    }
+	}
+    }
 }
 
 const TILE_PALETTE : & [(&str,Tool,&str)] = &[
@@ -345,6 +372,9 @@ impl eframe::App for Leved {
 			    ui.horizontal(|ui| {
 				if ui.button("SAVE").clicked() {
 				    self.save(ui);
+				}
+				if ui.button("PLAY").clicked() {
+				    self.play(ui);
 				}
 				if ui.button("SAVE AS").clicked() {
 				    let rfd =
